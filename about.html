@@ -46,7 +46,7 @@
   main{max-width:1120px;margin:0 auto;padding:16px 24px 80px}
 
   /* hero */
-  .hero{text-align:center;padding:80px 24px 40px;border-bottom:1px solid var(--border);background:var(--bg-primary)}
+  .hero{text-align:center;padding:80px 24px 40px;border-bottom:1px solid var(--border)}
   .eyebrow{display:inline-flex;align-items:center;gap:8px;font:400 .75rem var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--status-info);border:1px solid var(--border);background:var(--surface-card);padding:8px 16px;border-radius:999px}
   .eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent)}
   h1{font:600 clamp(3.25rem,5vw,4rem)/1.1 var(--display);letter-spacing:-.03em;margin:32px auto 24px;max-width:880px;color:var(--text-primary)}
@@ -55,7 +55,6 @@
   /* sections — alternate bands for editorial rhythm */
   .section{padding:80px 0;border-bottom:1px solid var(--border)}
   .section:nth-of-type(even){
-    background:var(--bg-secondary);
     margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);
     padding-left:max(24px,calc(50vw - 560px));padding-right:max(24px,calc(50vw - 560px));
   }
@@ -120,9 +119,7 @@
   body{position:relative}
   main,footer{position:relative;z-index:1}
   .hero,#hero,.section{position:relative;isolation:isolate}
-  .readability{position:absolute;inset:0;z-index:-1;background:rgba(23,23,23,.72);border-radius:12px;pointer-events:none}
   .view-db,footer a,.foot a{background:var(--surface-card);padding:8px 16px;border-radius:8px}
-  .foot{background:rgba(23,23,23,.72);border-radius:12px}
 </style>
 </head>
 <body>
@@ -132,14 +129,12 @@
 
 <main>
   <header class="hero">
-    <div class="readability" aria-hidden="true"></div>
     <div class="eyebrow">Audio fingerprint lab · field notes</div>
     <h1>The Science Behind Shazam</h1>
     <p class="subtitle">How 3 seconds of audio becomes a fingerprint that searches millions of songs.</p>
   </header>
 
   <section class="section" id="problem">
-    <div class="readability" aria-hidden="true"></div>
     <span class="kicker">01 / The problem</span>
     <h2>Why is audio recognition hard?</h2>
     <p class="prose">The same song never sounds the same twice. A phone mic, a speaker in a café, a car radio, someone humming along — all change the waveform. Volumes drift and noise piles on top. Comparing raw waveforms would fail every time, because no two recordings of one song are ever identical.</p>
@@ -155,7 +150,6 @@
   </section>
 
   <section class="section" id="steps">
-    <div class="readability" aria-hidden="true"></div>
     <span class="kicker">02 / The method</span>
     <h2>How it actually works</h2>
     <div class="step-grid">
@@ -246,7 +240,6 @@
   </section>
 
   <section class="section" id="innovation">
-    <div class="readability" aria-hidden="true"></div>
     <span class="kicker">03 / The innovation</span>
     <h2>Why it survives noise</h2>
     <p class="prose">Constellation fingerprinting is noise-resistant by design. Background noise raises the whole spectrum's floor, but the genuinely loud peaks still rise above it. Pick the strongest peaks and you get roughly the same anchors from a clean studio file and a crackly phone recording. The hashes between those anchors survive even when the waveform does not.</p>
@@ -277,7 +270,6 @@
   </section>
 
   <section class="section" id="numbers">
-    <div class="readability" aria-hidden="true"></div>
     <span class="kicker">04 / At scale</span>
     <h2>Shazam at scale</h2>
     <div class="stat-grid">
@@ -289,7 +281,6 @@
   </section>
 
   <section class="section" id="database">
-    <div class="readability" aria-hidden="true"></div>
     <span class="kicker">05 / Our database</span>
     <h2>Songs in our database</h2>
     <p class="prose">These are the four real songs our demo searches against. Real Shazam searches eight million.</p>
@@ -327,7 +318,6 @@
   </section>
 
   <section class="section" id="patent">
-    <div class="readability" aria-hidden="true"></div>
     <span class="kicker">06 / The patent</span>
     <h2>The original paper</h2>
     <p class="prose">This mechanism is based on Avery Wang's 2003 paper <strong>“An Industrial-Strength Audio Search Algorithm”</strong>, published at ISMIR 2003. It became the foundation of Shazam's matching engine.</p>
@@ -340,7 +330,6 @@
   </section>
 
   <section class="section" id="further">
-    <div class="readability" aria-hidden="true"></div>
     <span class="kicker">07 / Further reading</span>
     <h2>Go deeper</h2>
     <div class="link-grid">
