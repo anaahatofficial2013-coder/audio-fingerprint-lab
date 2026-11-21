@@ -261,7 +261,7 @@
   </div>
   <div class="foot">
     Built for Global Virtual Hackathon 2026 by Team Techortian's Squad<br>
-    <a href="about.html">&#8592; Back to info.</a>
+    <a id="infoLink" href="about.html">View info &#8594;</a>
   </div>
 </main>
 <div id="tourBlocker" class="hidden"></div>
@@ -1066,17 +1066,18 @@ function tourShow(target,text,accent,autoHide){
 }
 
 function tourSetBlocking(on){
-  const blocker=$('tourBlocker'), mic=$('micBtn');
+  const blocker=$('tourBlocker'), mic=$('micBtn'), info=$('infoLink');
+  const hit=(r,e,pad)=>e.clientX>=r.left-pad&&e.clientX<=r.right+pad&&e.clientY>=r.top-pad&&e.clientY<=r.bottom+pad;
   if(on){
     blocker.classList.remove('hidden');
     TOUR.blockerClick=e=>{
-      const r=mic.getBoundingClientRect();
-      if(e.clientX>=r.left-18&&e.clientX<=r.right+18&&e.clientY>=r.top-18&&e.clientY<=r.bottom+18) mic.click();
+      if(hit(mic.getBoundingClientRect(),e,18)){ mic.click(); return; }
+      if(info && hit(info.getBoundingClientRect(),e,0)) info.click();
     };
     TOUR.blockerMove=e=>{
-      const r=mic.getBoundingClientRect();
-      const over=e.clientX>=r.left-18&&e.clientX<=r.right+18&&e.clientY>=r.top-18&&e.clientY<=r.bottom+18;
-      blocker.classList.toggle('over-mic',over);
+      const over=hit(mic.getBoundingClientRect(),e,18);
+      const overInfo=!!info && hit(info.getBoundingClientRect(),e,0);
+      blocker.classList.toggle('over-mic',over||overInfo);
       mic.classList.toggle('tour-hover',over);
     };
     blocker.addEventListener('click',TOUR.blockerClick);
