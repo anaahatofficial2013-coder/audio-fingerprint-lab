@@ -249,17 +249,6 @@
 <script>
 const $ = id => document.getElementById(id);
 const DATABASE_URL='#'; // TODO: replace with the database page URL when provided
-// Documentation-only tone sequences, mirrored on about.html so both pages agree.
-// These are NOT used for matching — the live database is built from real audio.
-const ABOUT_TONES=[
-  {name:'Neon Drift',   tones:[440,520,660,440]},
-  {name:'Cyan Pulse',   tones:[330,494,587,330]},
-  {name:'Violet Steps', tones:[392,523,659,392]},
-  {name:'Midnight Loop',tones:[261,392,523,261]},
-  {name:'Signal Bloom', tones:[440,554,659,880]},
-  {name:'Echo Trail',   tones:[349,440,523,698]},
-];
-
 let state = {
   ctx:null, analyser:null, micSource:null, noiseSource:null, noiseGain:null, stream:null,
   running:false, micGen:0, peaks:[], peakId:0, hashes:[], hashedPairs:new Set(),
