@@ -74,7 +74,9 @@
   .step-card svg{width:100%;height:auto;display:block;margin-top:24px;border-top:1px solid var(--border);padding-top:16px}
 
   /* numbers */
-  .stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+  .song-index{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:32px}
+  .song-index span{padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface-card);color:var(--text-primary);font:400 .8125rem/1.6 var(--sans)}
   .stat{padding:32px 24px;border-radius:12px;border:1px solid var(--border);background:var(--surface-card);text-align:center}
   .stat .num{font:500 clamp(2rem,3vw,2.5rem)/1 var(--display);letter-spacing:-.02em;color:var(--accent)}
   .stat .label{margin-top:16px;color:var(--text-muted);font:400 .875rem/1.6 var(--sans)}
@@ -279,9 +281,10 @@
     <span class="kicker">04 / At scale</span>
     <h2>Shazam at scale</h2>
     <div class="stat-grid">
-      <div class="stat"><div class="num">8M</div><div class="label">songs in the database</div></div>
+      <div class="stat"><div class="num">51</div><div class="label">tracks in this demo library</div></div>
+      <div class="stat"><div class="num">8M</div><div class="label">songs in Shazam's database</div></div>
       <div class="stat"><div class="num">&lt;2s</div><div class="label">to find a match</div></div>
-      <div class="stat"><div class="num">~100</div><div class="label">hashes per fingerprint</div></div>
+      <div class="stat"><div class="num">2,500</div><div class="label">hashes per fingerprint</div></div>
       <div class="stat"><div class="num">2003</div><div class="label">first published by Avery Wang</div></div>
     </div>
   </section>
@@ -289,37 +292,59 @@
   <section class="section" id="database">
     <span class="kicker">05 / Our database</span>
     <h2>Songs in our database</h2>
-    <p class="prose">These are the four real songs our demo searches against. Real Shazam searches eight million.</p>
-    <div class="song-grid">
-
-      <article class="song-card">
-        <div class="song-name">Counting Stars</div>
-        <div class="tones">REAL AUDIO <b>&#8594;</b> 15s CLIP <b>&#8594;</b> LOCAL FINGERPRINT</div>
-        <svg viewBox="0 0 100 36" role="img" aria-label="Waveform sketch for Counting Stars"><polyline points="0,28 20,12 40,26 60,8 80,24 100,14" fill="none" stroke="#C18A52" stroke-width="2"/></svg>
-        <div class="song-label">Real audio fingerprint</div>
-      </article>
-
-      <article class="song-card">
-        <div class="song-name">Heat Waves</div>
-        <div class="tones">REAL AUDIO <b>&#8594;</b> 15s CLIP <b>&#8594;</b> LOCAL FINGERPRINT</div>
-        <svg viewBox="0 0 100 36" role="img" aria-label="Waveform sketch for Heat Waves"><polyline points="0,32 22,18 44,30 66,10 88,26 100,18" fill="none" stroke="#C18A52" stroke-width="2"/></svg>
-        <div class="song-label">Real audio fingerprint</div>
-      </article>
-
-      <article class="song-card">
-        <div class="song-name">Night Changes</div>
-        <div class="tones">REAL AUDIO <b>&#8594;</b> 15s CLIP <b>&#8594;</b> LOCAL FINGERPRINT</div>
-        <svg viewBox="0 0 100 36" role="img" aria-label="Waveform sketch for Night Changes"><polyline points="0,24 25,30 50,12 75,22 100,8" fill="none" stroke="#C18A52" stroke-width="2"/></svg>
-        <div class="song-label">Real audio fingerprint</div>
-      </article>
-
-      <article class="song-card">
-        <div class="song-name">Die With A Smile</div>
-        <div class="tones">REAL AUDIO <b>&#8594;</b> 15s CLIP <b>&#8594;</b> LOCAL FINGERPRINT</div>
-        <svg viewBox="0 0 100 36" role="img" aria-label="Waveform sketch for Die With A Smile"><polyline points="0,30 18,20 36,8 54,26 72,14 100,6" fill="none" stroke="#C18A52" stroke-width="2"/></svg>
-        <div class="song-label">Real audio fingerprint</div>
-      </article>
-
+    <p class="prose">These are the 51 real tracks our demo searches against. Every fingerprint was built locally from the audio itself &mdash; no cloud lookup, no API. Real Shazam searches eight million.</p>
+    <div class="song-index">
+      <span>ABBA - The Winner Takes It All</span>
+      <span>Alan Walker - Faded</span>
+      <span>Alec Benjamin - Let Me Down Slowly</span>
+      <span>Arctic Monkeys - 505</span>
+      <span>Boney M. - Rasputin</span>
+      <span>Britney Spears - Criminal</span>
+      <span>CKay - Love Nwantiti</span>
+      <span>DJ Snake - Let Me Love You</span>
+      <span>David Kushner - Daylight</span>
+      <span>Doja Cat - Woman</span>
+      <span>Dominic Fike - Babydoll</span>
+      <span>Drake - One Dance ft. Wizkid &amp; Kyla</span>
+      <span>Edward Maya, Vika Jigulina - Stereo love</span>
+      <span>Enya - Caribbean Blue</span>
+      <span>Eric McEntee - Say It's Not Over</span>
+      <span>Fall Out Boy - Centuries</span>
+      <span>French Montana - Unforgettable ft. Swae Lee</span>
+      <span>Frieren「AMV」- Golden Brown 🍂 _ Frieren_ Beyond Journey's En</span>
+      <span>Ghost - Mary On A Cross</span>
+      <span>Gracie Abrams - That’s So True</span>
+      <span>James Newton Howard feat. Jennifer Lawrence - Hanging Tree</span>
+      <span>Jennifer Lopez - On The Floor ft. Pitbull</span>
+      <span>KRONO &amp; Aaron Smith - Dancin</span>
+      <span>Kendrick Lamar &amp; SZA - All The Stars</span>
+      <span>Khalid - Young Dumb &amp; Broke</span>
+      <span>Lana Del Rey - Young And Beautiful</span>
+      <span>Lord Huron - The Night We Met</span>
+      <span>Maroon 5 - Animals</span>
+      <span>Marwa Loud - Bad boy</span>
+      <span>Melanie Martinez - Play Date</span>
+      <span>Mitski - Washing Machine Heart</span>
+      <span>Modern Talking - Cheri Cheri Lady</span>
+      <span>Post Malone &amp; Swae Lee - Sunflower</span>
+      <span>Pritt &amp; Dilushselva - Unakkul Naane</span>
+      <span>Runaway - AURORA #runaway</span>
+      <span>Runaway AURORA Lyrics</span>
+      <span>Ruth B. - Dandelions</span>
+      <span>Shakira - Whenever, Wherever</span>
+      <span>Sia - Cheap Thrills</span>
+      <span>Sidewalks and Skeletons - Goth</span>
+      <span>Soap&amp;Skin - Me and the Devil</span>
+      <span>Stephen Sanchez, Em Beihold - Until I Found You</span>
+      <span>Surf Curse - Freaks</span>
+      <span>The Animals - House Of The Rising Sun</span>
+      <span>The Mamas &amp; The Papas - California Dreamin'</span>
+      <span>The Stranglers - Golden Brown</span>
+      <span>yung kai - blue</span>
+      <span>Counting Stars</span>
+      <span>Heat Waves</span>
+      <span>Night Changes</span>
+      <span>Die With A Smile</span>
     </div>
   </section>
 
