@@ -92,8 +92,13 @@
   #micState{color:var(--status-processing)}
 
   /* panels */
-  .grid{display:grid;grid-template-columns:1.08fr .92fr;gap:24px}
-  .col{display:flex;flex-direction:column;gap:24px}
+  /* one grid with aligned rows — panels no longer live in independent columns */
+  .grid{display:grid;grid-template-columns:1.08fr .92fr;gap:24px;align-items:stretch}
+  .col{display:contents}
+  #secFft{grid-column:1;grid-row:1}
+  #secSpec{grid-column:1;grid-row:2}
+  #secMatch{grid-column:2;grid-row:1}
+  #secHash{grid-column:2;grid-row:2}
   .wide{display:grid;grid-template-columns:1fr 1fr;gap:24px}
   section.panel{position:relative;overflow:hidden;background:var(--surface-card);border:1px solid var(--border);border-radius:12px;padding:24px}
   .section-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font:500 clamp(1.625rem,2.4vw,2rem)/1.3 var(--display);color:var(--text-primary);margin-bottom:24px}
@@ -156,6 +161,8 @@
 
   @media(max-width:860px){
     .grid,.wide{grid-template-columns:1fr}
+    .col{display:flex;flex-direction:column;gap:24px}
+    #secFft,#secSpec,#secMatch,#secHash{grid-column:auto;grid-row:auto}
     .about-link{top:8px;right:8px;padding:8px;font-size:.75rem}
     .logo{font-size:.75rem;letter-spacing:.08em}
     h1{font-size:clamp(2.25rem,9vw,2.625rem)}
@@ -264,14 +271,14 @@
     <div class="col">
       <section id="secFft" class="panel hidden">
         <div class="section-title">Live FFT spectrum <span class="tag">0 – 4 kHz</span></div>
-        <canvas id="fftCanvas" width="800" height="200"></canvas>
+        <canvas id="fftCanvas" width="800" height="420"></canvas>
         <div class="axis"><span>0 Hz</span><span>1000</span><span>2000</span><span>3000</span><span>4000</span></div>
       </section>
       <section id="secSpec" class="panel hidden">
         <div class="section-title">Fingerprint anchors <span class="tag">DOTS = PEAKS · LINES = HASHES</span></div>
         <div class="canvas-wrap">
-          <canvas id="specCanvas" width="800" height="240"></canvas>
-          <canvas id="overlayCanvas" class="overlay" width="800" height="240"></canvas>
+          <canvas id="specCanvas" width="800" height="280"></canvas>
+          <canvas id="overlayCanvas" class="overlay" width="800" height="280"></canvas>
         </div>
         <div class="axis"><span>0 Hz</span><span>time</span><span>4000 Hz</span></div>
       </section>
