@@ -141,7 +141,9 @@
   .chain b{font:400 .75rem var(--mono);color:var(--accent)}
   .conf{height:4px;border-radius:99px;background:var(--border);margin-top:16px;overflow:hidden}
   .conf i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s ease}
-  .foot{text-align:center;color:var(--text-muted);font:400 .75rem var(--mono);letter-spacing:.08em;padding:8px 0}
+  .foot{text-align:center;color:var(--text-muted);font:400 .875rem/1.6 var(--sans);padding:48px 24px 8px}
+  .foot a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--border);transition:color .15s ease}
+  .foot a:hover{color:var(--accent-hover)}
 
   /* guided tooltip tour */
   #tourBlocker{position:fixed;inset:0;z-index:900;cursor:default}
@@ -186,7 +188,7 @@
     <div class="demo-strip">
       <div class="small">Sample from the database</div>
       <div class="demo-buttons" id="demoButtons"></div>
-      <a class="view-db" id="viewDb" href="#">View database &#8594;</a>
+      <a class="view-db" id="viewDb" href="about.html#database">View database &#8594;</a>
     </div>
     <div class="mic-wrap"><button id="micBtn" class="mic" aria-label="Activate microphone">&#127908;</button></div>
   </section>
@@ -236,6 +238,7 @@
       <div class="section-title">Song library <span class="tag">LOCAL ONLY</span></div>
       <div class="add-row"><label class="add-btn" for="addSong">&#43; Add song</label><input id="addSong" type="file" accept="audio/*" multiple><span id="addStatus" class="small">Local files only</span></div>
       <p class="hint">Songs in library: <span id="libraryCount" class="mono">0</span> &nbsp;·&nbsp; fingerprints stay in this browser.</p>
+      <a class="view-db" href="about.html#database">View database &#8594;</a>
     </section>
     <section id="secNoise" class="panel hidden">
       <div class="section-title">Add background noise <span class="tag">OPTIONAL</span></div>
@@ -248,14 +251,17 @@
       <p class="hint">Turn up the noise. Some dots disappear, but the <b>lines between the survivors</b> keep matching. That's the whole trick.</p>
     </section>
   </div>
-  <div class="foot">SIGNAL / FINGERPRINT VISUALISER</div>
+  <div class="foot">
+    Built for Global Virtual Hackathon 2026 by Team Techortian's Squad<br>
+    <a href="about.html">&#8592; Back to info.</a>
+  </div>
 </main>
 <div id="tourBlocker" class="hidden"></div>
 <svg id="tourArrowLayer" class="hidden" xmlns="http://www.w3.org/2000/svg"></svg>
 <div id="tourTip" class="hidden" role="tooltip"></div>
 <script>
 const $ = id => document.getElementById(id);
-const DATABASE_URL='#'; // TODO: replace with the database page URL when provided
+const DATABASE_URL='about.html#database';
 let state = {
   ctx:null, analyser:null, micSource:null, noiseSource:null, noiseGain:null, stream:null,
   running:false, micGen:0, peaks:[], peakId:0, hashes:[], hashedPairs:new Set(),
