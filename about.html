@@ -120,6 +120,12 @@
   main,footer{position:relative;z-index:1}
   .hero,#hero,.section{position:relative;isolation:isolate}
   .view-db,footer a,.foot a{background:var(--surface-card);padding:8px 16px;border-radius:8px}
+
+  /* easter egg */
+  .egg-toast{position:fixed;left:50%;bottom:32px;transform:translate(-50%,12px);z-index:1200;padding:8px 16px;border:1px solid var(--border);border-radius:16px;background:var(--surface-elevated);color:var(--accent);font:400 .75rem var(--mono);letter-spacing:.08em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  .egg-toast.show{opacity:1;transform:translate(-50%,0)}
+  .eyebrow{transition:border-color .5s ease,color .5s ease}
+  body.egg-active .eyebrow{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -353,6 +359,7 @@
   Built for Global Virtual Hackathon 2026 by Team Techortian's Squad<br>
   <a href="index.html">&#8592; Back to the demo.</a>
 </footer>
+<div id="eggToast" class="egg-toast mono" aria-hidden="true">shazam &mdash; nice find.</div>
 
 <script>
 /* ---------- Static monochromatic background texture ---------- */
@@ -454,6 +461,32 @@
   draw();
   let timer=0;
   window.addEventListener('resize',function(){clearTimeout(timer);timer=setTimeout(draw,120);});
+})();
+
+
+(function(){
+  let buf='', timer=0;
+  const toast=document.getElementById('eggToast');
+  if(!toast) return;
+  window.addEventListener('keydown',e=>{
+    if(e.altKey||e.ctrlKey||e.metaKey) return;
+    const t=e.target;
+    if(t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable)) return;
+    if(!e.key || e.key.length!==1 || !/[a-zA-Z]/.test(e.key)) return;
+    buf=(buf+e.key.toLowerCase()).slice(-6);
+    if(buf!=='shazam') return;
+    buf='';
+    document.body.classList.remove('egg-active');
+    toast.classList.remove('show');
+    void document.body.offsetWidth;
+    document.body.classList.add('egg-active');
+    toast.classList.add('show');
+    clearTimeout(timer);
+    timer=setTimeout(()=>{
+      document.body.classList.remove('egg-active');
+      toast.classList.remove('show');
+    },2600);
+  });
 })();
 
 </script>
