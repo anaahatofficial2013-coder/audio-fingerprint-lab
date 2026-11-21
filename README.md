@@ -7,7 +7,7 @@ A browser app that shows the one thing Shazam actually does: it does **not** lis
 ## Try it (15 seconds)
 
 1. Open the link. No sign-in, no install, no API key.
-2. Use the four suggested tracks at the top, or play any track in the database near your mic.
+2. Use the four featured tracks at the top, or play any track in the database near your mic.
 3. Watch the sound picture: amber **dots** appear (loud peaks). Amber **lines** join pairs of dots — those are hashes.
 4. When a line matches one stored in the library, the matching card lights up and the song name appears.
 5. Push the noise slider up. Some dots vanish, but the matching lines keep appearing. That is the point.
@@ -21,8 +21,8 @@ Everything below is written from scratch in `index.html`. No library does the ex
 - **FFT** — a radix-2 Cooley–Tukey transform (`spectrum()`) turns 2048 sound samples into a frequency spectrum. The same function runs on live microphone samples and on stored audio, so the two are directly comparable.
 - **Peak picking** — `pickPeaks()` keeps the eight strongest local maxima above an adaptive threshold in the 0–4 kHz band.
 - **Hashing** — `computeHash()` packs each pair of peaks into a 19-bit value: 7 bits per frequency and 5 bits for the time gap. Displayed as five hex characters.
-- **Database** — `buildHashesFromPCM()` reads the decoded audio samples directly and builds the same hashes offline, instantly. No 15-second training wait, no microphone noise baked into the reference.
-- **Matching** — a song wins when a rolling three-second window contains aligned votes from at least six hashes, four distinct hashes and three time buckets. Only one card can light up at a time.
+- **Database** — `buildHashesFromPCM()` trains from six variants of each track: clean audio, two noise levels, a small-speaker low-pass, a bright high-pass and a short room echo. The 2,500 strongest noise-trained hashes are kept first, then 500 augmented hashes fill the gaps.
+- **Matching** — a song wins when a rolling three-second window contains aligned votes from at least three to six hashes, three distinct hashes and two time buckets. Exact hashes count three times; tolerant one-step neighbours count once. Only one card can light up at a time.
 - **Noise** — a generated noise buffer is mixed into the analyser input, so you can hear and see the fingerprint degrade and still hold.
 
 ## What is not mine
