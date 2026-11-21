@@ -94,7 +94,7 @@
 
   /* matches */
   .cards{display:flex;flex-direction:column;gap:9px;counter-reset:card}
-  .card{counter-increment:card;position:relative;display:grid;grid-template-columns:26px 1fr auto;grid-template-areas:"dot name coll" "dot sub sub" "dot why why";gap:3px 12px;align-items:center;overflow:hidden;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.06);background:rgba(8,8,16,.6);transition:.25s}
+  .card{counter-increment:card;position:relative;display:grid;grid-template-columns:26px 1fr auto;grid-template-areas:"dot name coll" "dot sub sub" "dot . why";gap:2px 12px;align-items:center;overflow:hidden;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.06);background:rgba(8,8,16,.6);transition:.25s}
   .card::before{content:counter(card,decimal-leading-zero);grid-area:dot;display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.05);color:var(--muted);font:700 .62rem var(--mono)}
   .card.matched{border-color:rgba(61,255,160,.5);background:rgba(61,255,160,.06);box-shadow:0 0 28px -10px rgba(61,255,160,.45)}
   .card.matched::before{background:rgba(61,255,160,.16);color:var(--green)}
