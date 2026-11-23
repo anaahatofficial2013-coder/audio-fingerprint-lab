@@ -16,6 +16,7 @@
     --sans:'Inter',sans-serif;
     --display:'Space Grotesk',sans-serif;
     --mono:'IBM Plex Mono',monospace;
+    --serif:'Instrument Serif',Georgia,serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -185,4 +186,13 @@
     html{scroll-behavior:auto;scroll-padding-top:0}
     .has-js :where(.hero > *,.section > .kicker,.section > h2,.section > .prose,.figure,.step-card,.stat,.song-index span,.link-card,footer){opacity:1!important;transform:none!important;transition:none!important}
     .mech-gear::before,.mic-orbit,.mech-seal__ring,.mech-seal__ring--2,.mech-seal__pips{animation:none!important}
+  }
+
+  /* Instrument Serif for capsules, chips and small rounded labels */
+  .eyebrow,.about-link,.backnav a,.steps div,.song-ref,.view-db,footer a,.foot a,
+  .toggle,.add-btn,.conf-pill,.debug-head button,.hash-row,.hash-row .hx,
+  .card::before,kbd,.egg-toast,#tourTip,.song-index span,.step-num,
+  .mech-readout,.process-rail,.mech-seal__core{
+    font-family:var(--serif);
+    font-weight:400;
   }
