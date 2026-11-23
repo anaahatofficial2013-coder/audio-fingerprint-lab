@@ -18,7 +18,7 @@
   <header class="hero">
     <div class="eyebrow">Audio fingerprint lab · field notes</div>
     <h1>The Science Behind Shazam</h1>
-    <p class="subtitle">How 3 seconds of audio becomes a fingerprint that searches millions of songs.</p>
+    <p class="subtitle">How 5 seconds of audio becomes a fingerprint that searches millions of songs.</p>
   </header>
 
   <section class="section" id="problem">
@@ -44,7 +44,7 @@
       <article class="step-card">
         <div class="step-num">01</div>
         <h3>FFT — Fast Fourier Transform</h3>
-        <p>Raw audio is a waveform changing over time. The FFT converts short slices of it into a frequency spectrum: a snapshot of which frequencies are loudest right now. Do that every hundred milliseconds and you get a moving picture of sound.</p>
+        <p>Raw audio is a waveform changing over time. The FFT converts short slices of it into a frequency spectrum: a snapshot of which frequencies are loudest right now. Do that every quarter-second and you get a moving picture of sound.</p>
         <svg viewBox="0 0 320 110" role="img" aria-label="A waveform transforming into frequency bars">
           <path d="M10 55 C 30 20, 50 20, 70 55 S 110 90, 130 55" fill="none" stroke="#C18A52" stroke-width="2.4" stroke-linecap="round"/>
           <line x1="148" y1="55" x2="190" y2="55" stroke="#C18A52" stroke-width="2"/>
@@ -100,7 +100,7 @@
       <article class="step-card">
         <div class="step-num">04</div>
         <h3>Hash Matching</h3>
-        <p>Query hashes are looked up in a database indexed by hash value. When enough hashes from the recording collide with hashes from one song — at consistent time offsets — the alignment votes for that song and a match is confirmed in under two seconds.</p>
+        <p>Query hashes are looked up in a database indexed by hash value. When enough hashes from the recording collide with hashes from one song — at consistent 100 ms time-offset bins — the alignment votes for that song. After five seconds of audio, a vote at least twice the runner-up confirms the match.</p>
         <svg viewBox="0 0 320 110" role="img" aria-label="A grid of songs where one card lights up with hash collisions">
           <g>
             <rect x="16" y="14" width="130" height="22" rx="6" fill="#242422" stroke="#393833"/>
@@ -162,8 +162,9 @@
     <div class="stat-grid">
       <div class="stat"><div class="num">51</div><div class="label">tracks in this demo library</div></div>
       <div class="stat"><div class="num">8M</div><div class="label">songs in Shazam's database</div></div>
-      <div class="stat"><div class="num">&lt;2s</div><div class="label">to find a match</div></div>
-      <div class="stat"><div class="num">3,000</div><div class="label">hashes per fingerprint</div></div>
+      <div class="stat"><div class="num">5s</div><div class="label">of audio before a match</div></div>
+      <div class="stat"><div class="num">131,386</div><div class="label">hashes in this demo library</div></div>
+      <div class="stat"><div class="num">3,000</div><div class="label">max hashes per fingerprint</div></div>
       <div class="stat"><div class="num">2003</div><div class="label">first published by Avery Wang</div></div>
     </div>
   </section>
@@ -171,7 +172,7 @@
   <section class="section" id="database">
     <span class="kicker">05 / Our database</span>
     <h2>Songs in our database</h2>
-    <p class="prose">These are the 51 real tracks our demo searches against. Every fingerprint was trained from six variants of the audio itself &mdash; no cloud lookup, no API. Real Shazam searches eight million.</p>
+    <p class="prose">These are the 51 real tracks our demo searches against. Every fingerprint was trained from 14 variants of the audio itself &mdash; clean, five noise levels, three speaker responses, two microphone responses and three room echoes &mdash; then pruned to the hashes that survive interference from the other songs. That is 131,386 hashes in total, all local: no cloud lookup, no API. Real Shazam searches eight million.</p>
     <div class="song-index">
       <span>The Winner Takes It All</span>
       <span>Faded</span>
