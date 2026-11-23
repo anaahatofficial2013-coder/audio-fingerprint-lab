@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="index.css">
 </head>
 <body>
-<canvas id="bgTexture" aria-hidden="true"></canvas>
+<canvas id="bgTexture"></canvas>
 <div class="logo">Techrotians Squad</div>
 <a class="about-link" href="about.html">How does this work? &#8594;</a>
 <main>
@@ -27,15 +27,15 @@
       <div class="demo-buttons" id="demoButtons"></div>
       <a class="view-db" id="viewDb" href="about.html#database">View database &#8594;</a>
     </div>
-    <div class="mic-wrap"><button id="micBtn" class="mic" aria-label="Activate microphone" aria-pressed="false">&#127908;</button></div>
-    <div id="micError" class="mic-error hidden" role="alert"></div>
+    <div class="mic-wrap"><button id="micBtn" class="mic">&#127908;</button></div>
+    <div id="micError" class="mic-error hidden"></div>
     <div class="wave-hint">
-      <canvas id="idleWave" class="idle-wave" width="600" height="44" aria-hidden="true"></canvas>
+      <canvas id="idleWave" class="idle-wave" width="600" height="44"></canvas>
       <span class="key-hint mono">press <kbd>SPACE</kbd> to start / stop</span>
     </div>
   </section>
 
-  <div id="nowBox" class="now hidden" data-state="scanning" role="status" aria-live="polite">
+  <div id="nowBox" class="now hidden" data-state="scanning">
     <div class="eq"><i></i><i></i><i></i><i></i></div>
     <div class="now-text">
       <span id="nowLabel" class="small">Now playing</span>
@@ -52,14 +52,14 @@
     <div class="col">
       <section id="secFft" class="panel hidden">
         <div class="section-title">Live FFT spectrum <span class="tag">0 – 4 kHz</span></div>
-        <canvas id="fftCanvas" width="800" height="420" role="img" aria-label="Live FFT spectrum from zero to four thousand hertz"></canvas>
+        <canvas id="fftCanvas" width="800" height="420"></canvas>
         <div class="axis"><span>0 Hz</span><span>1000</span><span>2000</span><span>3000</span><span>4000</span></div>
       </section>
       <section id="secSpec" class="panel hidden">
         <div class="section-title">Fingerprint anchors <span class="tag">DOTS = PEAKS · LINES = HASHES</span></div>
         <div class="canvas-wrap">
-          <canvas id="specCanvas" width="800" height="280" role="img" aria-label="Live fingerprint constellation of frequency peaks over time"></canvas>
-          <canvas id="overlayCanvas" class="overlay" width="800" height="280" aria-hidden="true"></canvas>
+          <canvas id="specCanvas" width="800" height="280"></canvas>
+          <canvas id="overlayCanvas" class="overlay" width="800" height="280"></canvas>
         </div>
         <div class="axis"><span>0 Hz</span><span>time</span><span>4000 Hz</span></div>
       </section>
@@ -84,7 +84,7 @@
   <div class="wide">
     <section id="secPlayer" class="panel hidden">
       <div class="section-title">Song library <span class="tag">LOCAL ONLY</span></div>
-      <div class="add-row"><label class="add-btn" for="addSong">&#43; Add song</label><input id="addSong" type="file" accept="audio/*" multiple><span id="addStatus" class="small" role="status" aria-live="polite">Local files only</span></div>
+      <div class="add-row"><label class="add-btn" for="addSong">&#43; Add song</label><input id="addSong" type="file" accept="audio/*" multiple><span id="addStatus" class="small">Local files only</span></div>
       <p class="hint">Songs in library: <span id="libraryCount" class="mono">51</span> &nbsp;·&nbsp; fingerprints stay in this browser.</p>
       <a class="view-db" href="about.html#database">View database &#8594;</a>
     </section>
@@ -92,8 +92,8 @@
       <div class="section-title">Add background noise <span class="tag">OPTIONAL</span></div>
       <div class="noise-row">
         <label class="noise-label" for="noiseSlider">Background noise</label>
-        <input id="noiseSlider" type="range" min="0" max="1" step="0.01" value="0" aria-describedby="noiseVal">
-        <span id="noiseVal" class="mono" aria-live="polite">0.00</span>
+        <input id="noiseSlider" type="range" min="0" max="1" step="0.01" value="0">
+        <span id="noiseVal" class="mono">0.00</span>
       </div>
       <div class="chain mono"><span>peaks <b id="mPeaks">0</b></span><span>&#8594;</span><span>hashes <b id="mHashes">0</b></span><span>&#8594;</span><span>collisions <b id="mColl">0</b></span></div>
       <div class="conf"><i id="confBar"></i></div>
@@ -107,9 +107,9 @@
 </main>
 <div id="tourBlocker" class="hidden"></div>
 <svg id="tourArrowLayer" class="hidden" xmlns="http://www.w3.org/2000/svg"></svg>
-<div id="tourTip" class="hidden" role="tooltip"></div>
-<div id="eggToast" class="egg-toast mono" aria-hidden="true">shazam &mdash; nice find.</div>
-<div id="debugPanel" class="debug-panel hidden" role="status" aria-live="polite">
+<div id="tourTip" class="hidden"></div>
+<div id="eggToast" class="egg-toast mono">shazam &mdash; nice find.</div>
+<div id="debugPanel" class="debug-panel hidden">
   <div class="debug-head"><span>Fingerprint debug &middot; press D to hide</span><button id="selfTestBtn" type="button">Run 8-clip self test</button></div>
   <pre id="debugBody">Waiting for audio. Press D to toggle diagnostics.</pre>
 </div>
@@ -502,7 +502,6 @@ async function startEngine(){
   $('micToggle').textContent='Start mic';
   $('micState').textContent='off';
   $('micBtn').classList.remove('active');
-  $('micBtn').setAttribute('aria-pressed','false');
   renderCards(); updateLibraryCount(); renderNow(); renderReferenceSongs();
   loop();
 }
@@ -523,7 +522,6 @@ async function startMic(){
     $('micToggle').textContent='Stop mic';
     $('micState').textContent='live';
     $('micBtn').classList.add('active');
-    $('micBtn').setAttribute('aria-pressed','true');
   }catch(err){
     state.micConnected=false; state.micDenied=true;
     const name=err && err.name;

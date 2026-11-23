@@ -25,14 +25,6 @@
     font:400 1rem/1.6 var(--sans);-webkit-font-smoothing:antialiased;
   }
   button,input{font:inherit}
-  button:focus-visible,input:focus-visible,a:focus-visible,label:focus-visible{
-    outline:2px solid var(--accent);
-    outline-offset:3px;
-  }
-  @media(prefers-reduced-motion:reduce){
-    html{scroll-behavior:auto}
-    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
-  }
   a{color:inherit}
   .hidden{display:none !important}
   .mono{font:400 .75rem var(--mono);font-variant-numeric:tabular-nums}

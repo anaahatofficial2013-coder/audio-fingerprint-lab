@@ -10,7 +10,7 @@
 
 </head>
 <body>
-<canvas id="bgTexture" aria-hidden="true"></canvas>
+<canvas id="bgTexture"></canvas>
 
 <nav class="backnav"><a href="index.html">&#8592; Try it yourself</a></nav>
 
@@ -26,7 +26,7 @@
     <h2>Why is audio recognition hard?</h2>
     <p class="prose">The same song never sounds the same twice. A phone mic, a speaker in a café, a car radio, someone humming along — all change the waveform. Volumes drift and noise piles on top. Comparing raw waveforms would fail every time, because no two recordings of one song are ever identical.</p>
     <div class="figure">
-      <svg viewBox="0 0 560 170" role="img" aria-label="A clean tone and a noisy recording of the same tone look visually different">
+      <svg viewBox="0 0 560 170">
         <line x1="10" y1="85" x2="550" y2="85" stroke="#393833" stroke-width="1"/>
         <path d="M10 85 C 45 30, 80 30, 115 85 S 185 140, 220 85 S 290 30, 325 85 S 395 140, 430 85 S 500 30, 550 85" fill="none" stroke="#C18A52" stroke-width="2.6" stroke-linecap="round"/>
         <polyline points="10,85 28,55 40,105 58,42 72,112 90,60 104,98 122,48 138,118 156,58 172,102 190,45 206,120 224,62 240,96 258,50 274,110 292,60 308,100 326,46 342,116 360,58 376,104 394,44 410,118 428,62 444,98 462,50 478,112 496,60 512,100 530,48 550,85" fill="none" stroke="#A6A39C" stroke-width="1.8" stroke-linejoin="round" opacity=".9"/>
@@ -45,7 +45,7 @@
         <div class="step-num">01</div>
         <h3>FFT — Fast Fourier Transform</h3>
         <p>Raw audio is a waveform changing over time. The FFT converts short slices of it into a frequency spectrum: a snapshot of which frequencies are loudest right now. Do that every quarter-second and you get a moving picture of sound.</p>
-        <svg viewBox="0 0 320 110" role="img" aria-label="A waveform transforming into frequency bars">
+        <svg viewBox="0 0 320 110">
           <path d="M10 55 C 30 20, 50 20, 70 55 S 110 90, 130 55" fill="none" stroke="#C18A52" stroke-width="2.4" stroke-linecap="round"/>
           <line x1="148" y1="55" x2="190" y2="55" stroke="#C18A52" stroke-width="2"/>
           <polygon points="190,55 178,48 178,62" fill="#C18A52"/>
@@ -65,7 +65,7 @@
         <div class="step-num">02</div>
         <h3>Peak Picking</h3>
         <p>Storing the whole spectrum would be wasteful and fragile. Instead the algorithm keeps only the loudest peaks in each slice — bright constellation points that rise above the local noise floor. These peaks become the anchors of the fingerprint.</p>
-        <svg viewBox="0 0 320 110" role="img" aria-label="Frequency bars with a few peaks above a threshold line">
+        <svg viewBox="0 0 320 110">
           <g fill="rgba(193,138,82,.35)">
             <rect x="18" y="70" width="13" height="28" rx="2"/><rect x="40" y="58" width="13" height="40" rx="2"/>
             <rect x="62" y="78" width="13" height="20" rx="2"/><rect x="84" y="44" width="13" height="54" rx="2"/>
@@ -87,7 +87,7 @@
         <div class="step-num">03</div>
         <h3>Combinatorial Hashing</h3>
         <p>Each anchor is paired with nearby peaks in a target zone. Every pair produces one compact hash: two frequencies plus the time gap between them. This is the actual Shazam patent method from Wang et al. 2003 — and it is what makes a fingerprint searchable.</p>
-        <svg viewBox="0 0 320 110" role="img" aria-label="Two anchor dots joined by a line with a hash value">
+        <svg viewBox="0 0 320 110">
           <circle cx="56" cy="78" r="7" fill="#C18A52"/>
           <circle cx="216" cy="36" r="7" fill="#A6A39C"/>
           <line x1="56" y1="78" x2="216" y2="36" stroke="rgba(193,138,82,.7)" stroke-width="2" stroke-dasharray="4 4"/>
@@ -101,7 +101,7 @@
         <div class="step-num">04</div>
         <h3>Hash Matching</h3>
         <p>Query hashes are looked up in a database indexed by hash value. When enough hashes from the recording collide with hashes from one song — at consistent 100 ms time-offset bins — the alignment votes for that song. After five seconds of audio, a vote at least twice the runner-up confirms the match.</p>
-        <svg viewBox="0 0 320 110" role="img" aria-label="A grid of songs where one card lights up with hash collisions">
+        <svg viewBox="0 0 320 110">
           <g>
             <rect x="16" y="14" width="130" height="22" rx="6" fill="#242422" stroke="#393833"/>
             <rect x="16" y="44" width="130" height="22" rx="6" fill="rgba(120,151,123,.12)" stroke="#78977B"/>
@@ -131,7 +131,7 @@
     <h2>Why it survives noise</h2>
     <p class="prose">Constellation fingerprinting is noise-resistant by design. Background noise raises the whole spectrum's floor, but the genuinely loud peaks still rise above it. Pick the strongest peaks and you get roughly the same anchors from a clean studio file and a crackly phone recording. The hashes between those anchors survive even when the waveform does not.</p>
     <div class="figure">
-      <svg viewBox="0 0 560 190" role="img" aria-label="Spectrograms with and without noise showing the same constellation dots">
+      <svg viewBox="0 0 560 190">
         <rect x="10" y="22" width="250" height="145" rx="10" fill="#171717" stroke="#393833"/>
         <rect x="300" y="22" width="250" height="145" rx="10" fill="#171717" stroke="#393833"/>
         <g stroke="rgba(193,138,82,.12)">
@@ -264,7 +264,7 @@
   Built for Global Virtual Hackathon 2026 by Team Techortian's Squad<br>
   <a href="index.html">&#8592; Back to the demo.</a>
 </footer>
-<div id="eggToast" class="egg-toast mono" aria-hidden="true">shazam &mdash; nice find.</div>
+<div id="eggToast" class="egg-toast mono">shazam &mdash; nice find.</div>
 
 <script>
 /* ---------- Static monochromatic background texture ---------- */
