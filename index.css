@@ -218,3 +218,14 @@
   body.egg-active .mic-wrap::before{transform:scale(1.12);border-color:var(--accent)}
   body.egg-active .mic-wrap::after{transform:scale(1.07);border-color:var(--accent)}
   body.egg-active .logo{color:var(--accent)}
+
+  /* hidden fingerprint diagnostics (D key) */
+  .debug-panel{position:fixed;left:16px;bottom:16px;z-index:1200;width:min(560px,calc(100vw - 32px));max-height:52vh;overflow:auto;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:rgba(36,36,34,.97);box-shadow:0 8px 28px rgba(0,0,0,.5);font:400 .75rem/1.5 var(--mono);color:var(--text-secondary)}
+  .debug-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;color:var(--accent)}
+  .debug-head button{padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-elevated);color:var(--text-primary);font:400 .6875rem var(--mono);cursor:pointer}
+  .debug-head button:disabled{opacity:.45;cursor:default}
+  .debug-panel pre{white-space:pre-wrap;word-break:break-word;color:var(--text-secondary)}
+  .dbg-table{width:100%;border-collapse:collapse;margin-top:8px}
+  .dbg-table th,.dbg-table td{padding:2px 8px;text-align:left}
+  .dbg-summary{margin-top:8px;color:var(--status-success)}
+  @media(max-width:860px){.debug-panel{left:8px;bottom:8px;width:calc(100vw - 16px);max-height:44vh}}
