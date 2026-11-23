@@ -25,6 +25,14 @@
     font:400 1rem/1.6 var(--sans);-webkit-font-smoothing:antialiased;
   }
   button,input{font:inherit}
+  button:focus-visible,input:focus-visible,a:focus-visible,label:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:3px;
+  }
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  }
   a{color:inherit}
   .hidden{display:none !important}
   .mono{font:400 .75rem var(--mono);font-variant-numeric:tabular-nums}
@@ -132,6 +140,7 @@
   #addSong{display:none}
   .hint{margin-top:16px;color:var(--text-muted);font:400 .875rem/1.6 var(--sans)}
   .noise-row{display:flex;align-items:center;gap:16px}
+  .noise-label{color:var(--text-secondary);font:500 .875rem var(--sans);white-space:nowrap}
   input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;background:linear-gradient(90deg,var(--accent) var(--fill,0%),var(--border) var(--fill,0%));outline:none}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:1px solid var(--border);cursor:pointer}
   input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);border:1px solid var(--border);cursor:pointer}

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A browser-based visualization of constellation audio fingerprinting and Shazam-style hash matching.">
 <title>Shazam Fingerprint Visualiser</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="index.css">
@@ -26,7 +27,7 @@
       <div class="demo-buttons" id="demoButtons"></div>
       <a class="view-db" id="viewDb" href="about.html#database">View database &#8594;</a>
     </div>
-    <div class="mic-wrap"><button id="micBtn" class="mic" aria-label="Activate microphone">&#127908;</button></div>
+    <div class="mic-wrap"><button id="micBtn" class="mic" aria-label="Activate microphone" aria-pressed="false">&#127908;</button></div>
     <div id="micError" class="mic-error hidden" role="alert"></div>
     <div class="wave-hint">
       <canvas id="idleWave" class="idle-wave" width="600" height="44" aria-hidden="true"></canvas>
@@ -34,7 +35,7 @@
     </div>
   </section>
 
-  <div id="nowBox" class="now hidden" data-state="scanning">
+  <div id="nowBox" class="now hidden" data-state="scanning" role="status" aria-live="polite">
     <div class="eq"><i></i><i></i><i></i><i></i></div>
     <div class="now-text">
       <span id="nowLabel" class="small">Now playing</span>
@@ -51,14 +52,14 @@
     <div class="col">
       <section id="secFft" class="panel hidden">
         <div class="section-title">Live FFT spectrum <span class="tag">0 – 4 kHz</span></div>
-        <canvas id="fftCanvas" width="800" height="420"></canvas>
+        <canvas id="fftCanvas" width="800" height="420" role="img" aria-label="Live FFT spectrum from zero to four thousand hertz"></canvas>
         <div class="axis"><span>0 Hz</span><span>1000</span><span>2000</span><span>3000</span><span>4000</span></div>
       </section>
       <section id="secSpec" class="panel hidden">
         <div class="section-title">Fingerprint anchors <span class="tag">DOTS = PEAKS · LINES = HASHES</span></div>
         <div class="canvas-wrap">
-          <canvas id="specCanvas" width="800" height="280"></canvas>
-          <canvas id="overlayCanvas" class="overlay" width="800" height="280"></canvas>
+          <canvas id="specCanvas" width="800" height="280" role="img" aria-label="Live fingerprint constellation of frequency peaks over time"></canvas>
+          <canvas id="overlayCanvas" class="overlay" width="800" height="280" aria-hidden="true"></canvas>
         </div>
         <div class="axis"><span>0 Hz</span><span>time</span><span>4000 Hz</span></div>
       </section>
@@ -83,15 +84,16 @@
   <div class="wide">
     <section id="secPlayer" class="panel hidden">
       <div class="section-title">Song library <span class="tag">LOCAL ONLY</span></div>
-      <div class="add-row"><label class="add-btn" for="addSong">&#43; Add song</label><input id="addSong" type="file" accept="audio/*" multiple><span id="addStatus" class="small">Local files only</span></div>
+      <div class="add-row"><label class="add-btn" for="addSong">&#43; Add song</label><input id="addSong" type="file" accept="audio/*" multiple><span id="addStatus" class="small" role="status" aria-live="polite">Local files only</span></div>
       <p class="hint">Songs in library: <span id="libraryCount" class="mono">51</span> &nbsp;·&nbsp; fingerprints stay in this browser.</p>
       <a class="view-db" href="about.html#database">View database &#8594;</a>
     </section>
     <section id="secNoise" class="panel hidden">
       <div class="section-title">Add background noise <span class="tag">OPTIONAL</span></div>
       <div class="noise-row">
-        <input id="noiseSlider" type="range" min="0" max="1" step="0.01" value="0">
-        <span id="noiseVal" class="mono">0.00</span>
+        <label class="noise-label" for="noiseSlider">Background noise</label>
+        <input id="noiseSlider" type="range" min="0" max="1" step="0.01" value="0" aria-describedby="noiseVal">
+        <span id="noiseVal" class="mono" aria-live="polite">0.00</span>
       </div>
       <div class="chain mono"><span>peaks <b id="mPeaks">0</b></span><span>&#8594;</span><span>hashes <b id="mHashes">0</b></span><span>&#8594;</span><span>collisions <b id="mColl">0</b></span></div>
       <div class="conf"><i id="confBar"></i></div>
@@ -348,12 +350,39 @@ function renderCards(){
     const div=document.createElement('div');
     div.className='card'+(card.matched?' matched':'');
     div.id='card'+idx;
-    div.innerHTML = '<div class="card-name">'+card.name+'</div>'+
-      '<div class="coll-wrap"><div class="card-coll mono" id="coll'+idx+'">'+card.collisions+'</div>'+
-      '<div class="card-conf mono" id="conf'+idx+'">'+(card.confidence||0)+'% match</div></div>'+
-      '<div class="matched-label">Matched</div>'+
-      '<div class="small" id="st'+idx+'"></div>'+
-      '<div class="why mono" id="why'+idx+'"></div>';
+
+    const name=document.createElement('div');
+    name.className='card-name';
+    name.textContent=card.name;
+    div.appendChild(name);
+
+    const collWrap=document.createElement('div');
+    collWrap.className='coll-wrap';
+    const coll=document.createElement('div');
+    coll.className='card-coll mono';
+    coll.id='coll'+idx;
+    coll.textContent=card.collisions;
+    const conf=document.createElement('div');
+    conf.className='card-conf mono';
+    conf.id='conf'+idx;
+    conf.textContent=(card.confidence||0)+'% match';
+    collWrap.append(coll,conf);
+    div.appendChild(collWrap);
+
+    const matched=document.createElement('div');
+    matched.className='matched-label';
+    matched.textContent='Matched';
+    div.appendChild(matched);
+
+    const status=document.createElement('div');
+    status.className='small';
+    status.id='st'+idx;
+    div.appendChild(status);
+
+    const why=document.createElement('div');
+    why.className='why mono';
+    why.id='why'+idx;
+    div.appendChild(why);
     container.appendChild(div);
   });
 }
@@ -412,16 +441,28 @@ async function startEngine(){
   const builtinNames=new Set(BUILTIN_SONGS.map(s=>s.name));
   try{
     const saved=JSON.parse(localStorage.getItem('shazamSongs9')||'[]');
+    if(!Array.isArray(saved)) throw new Error('Invalid saved library');
     saved.forEach(s=>{
+      if(!s || typeof s.name!=='string' || !Array.isArray(s.index)) return;
+      if(s.name.length>28) s.name=s.name.slice(0,28);
       if(builtinNames.has(s.name)) return;
-      const index=new Map((s.index||[]).map(x=>[x[0],x[1]]));
+      const validIndex=s.index.filter(x=>
+        Array.isArray(x) && typeof x[0]==='string' &&
+        /^[0-9A-Fa-f]{5}$/.test(x[0]) && Array.isArray(x[1]) &&
+        x[1].every(t=>typeof t==='number' && Number.isFinite(t))
+      );
+      if(validIndex.length===0) return;
+      const index=new Map(validIndex.map(x=>[x[0].toUpperCase(),x[1]]));
       state.cards.push({
         name:s.name, hidden:false, sequence:null, buffer:null, ready:true, userAdded:true,
         hashIndex:index, hashSet:new Set(index.keys()), collisions:0, matched:false,
         matchedPeakIds:new Set(), hits:[], counts:new Map(),
       });
     });
-  }catch(e){}
+  }catch(e){
+    const status=$('addStatus');
+    if(status) status.textContent='Saved library could not be loaded';
+  }
 
   for(const song of BUILTIN_SONGS){
     state.cards.push({
@@ -436,6 +477,8 @@ async function startEngine(){
   $('micToggle').textContent='Start mic';
   $('micState').textContent='off';
   $('micBtn').classList.remove('active');
+  $('micBtn').setAttribute('aria-pressed','false');
+  $('micBtn').setAttribute('aria-pressed','false');
   renderCards(); updateLibraryCount(); renderNow(); renderReferenceSongs();
   loop();
 }
@@ -444,7 +487,7 @@ async function startMic(){
   await startEngine();
   try{
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
-      throw {name:'NotSupportedError'};
+      throw new DOMException('Microphone access is not supported', 'NotSupportedError');
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
     if(!state.ctx){ stream.getTracks().forEach(t=>t.stop()); return; }
     const micSource=state.ctx.createMediaStreamSource(stream);
@@ -455,6 +498,7 @@ async function startMic(){
     $('micToggle').textContent='Stop mic';
     $('micState').textContent='live';
     $('micBtn').classList.add('active');
+    $('micBtn').setAttribute('aria-pressed','true');
   }catch(err){
     state.micConnected=false; state.micDenied=true;
     const name=err && err.name;
@@ -468,7 +512,10 @@ async function startMic(){
     else if(name==='NotSupportedError')
       msg='This browser does not expose microphone access. Try a recent Chrome, Edge or Firefox over HTTPS or localhost.';
     const box=$('micError');
-    box.innerHTML='<strong>Mic unavailable.</strong> '+msg;
+    box.replaceChildren();
+    const heading=document.createElement('strong');
+    heading.textContent='Mic unavailable.';
+    box.append(heading,document.createTextNode(' '+msg));
     box.classList.remove('hidden');
     $('micState').textContent='blocked';
     $('micToggle').textContent='Retry mic';
@@ -780,7 +827,12 @@ function updateLibraryCount(){
 function saveLibrary(){
   const data=state.cards.filter(c=>c.ready && c.userAdded)
     .map(c=>({name:c.name,index:[...c.hashIndex].map(([h,ts])=>[h,ts])}));
-  try{ localStorage.setItem('shazamSongs9',JSON.stringify(data)); }catch(e){}
+  try{
+    localStorage.setItem('shazamSongs9',JSON.stringify(data));
+  }catch(e){
+    const status=$('addStatus');
+    if(status) status.textContent='Local storage unavailable';
+  }
   updateLibraryCount();
 }
 
