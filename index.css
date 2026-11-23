@@ -245,7 +245,7 @@
 
   /* mechanical fingerprint instrument */
   .mech-strip,.process-rail{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text-muted);font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none}
-  .mech-strip{gap:12px;margin:0 auto 18px}
+  .mech-strip{gap:12px;margin:20px auto 18px}
   .mech-gear{position:relative;width:14px;height:14px;flex:0 0 14px;border:1px solid var(--accent);border-radius:50%;background:var(--bg-primary)}
   .mech-gear::before{content:'';position:absolute;inset:-5px;border:1px dashed var(--border);border-radius:50%;animation:mech-spin 18s linear infinite}
   .mech-gear::after{content:'';position:absolute;inset:4px;border:1px solid var(--border);border-radius:50%}
