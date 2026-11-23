@@ -230,3 +230,19 @@
   .dbg-table th,.dbg-table td{padding:2px 8px;text-align:left}
   .dbg-summary{margin-top:8px;color:var(--status-success)}
   @media(max-width:860px){.debug-panel{left:8px;bottom:8px;width:calc(100vw - 16px);max-height:44vh}}
+
+  /* scroll reveal + interaction polish */
+  html{scroll-padding-top:88px}
+  [id]{scroll-margin-top:88px}
+  ::selection{background:rgba(193,138,82,.3);color:var(--text-primary)}
+  a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .has-js :where(#hero > *,#nowBox,.grid .panel,.wide .panel,.foot){
+    opacity:0;transform:translate3d(0,18px,0);
+    transition:opacity .6s ease,transform .6s cubic-bezier(.22,.61,.36,1);
+    transition-delay:var(--reveal-delay,0ms);
+  }
+  .has-js :where(#hero > *,#nowBox,.grid .panel,.wide .panel,.foot).is-visible{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto;scroll-padding-top:0}
+    .has-js :where(#hero > *,#nowBox,.grid .panel,.wide .panel,.foot){opacity:1!important;transform:none!important;transition:none!important}
+  }

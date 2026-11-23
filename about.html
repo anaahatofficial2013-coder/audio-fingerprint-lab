@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="about.css">
+<script>document.documentElement.classList.add('has-js');</script>
 
 </head>
 <body>
@@ -392,6 +393,38 @@
       toast.classList.remove('show');
     },2600);
   });
+})();
+
+</script>
+<script>
+/* ---------- Scroll reveal ---------- */
+(function(){
+  const root=document.documentElement;
+  if(!root.classList.contains('has-js')) return;
+  const selector='.hero > *,.section > .kicker,.section > h2,.section > .prose,.figure,.step-card,.stat,.song-index span,.link-card,footer';
+  const nodes=Array.prototype.slice.call(document.querySelectorAll(selector));
+  if(!nodes.length) return;
+  const groups=new Map();
+  nodes.forEach(el=>{
+    const key=el.parentNode;
+    const n=groups.get(key)||0;
+    groups.set(key,n+1);
+    el.style.setProperty('--reveal-delay',Math.min(n*55,330)+'ms');
+  });
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce||!('IntersectionObserver' in window)){
+    nodes.forEach(el=>el.classList.add('is-visible'));
+    return;
+  }
+  const io=new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        entry.target.classList.add('is-visible');
+        io.unobserve(entry.target);
+      }
+    });
+  },{threshold:.08,rootMargin:'0px 0px -32px 0px'});
+  nodes.forEach(el=>io.observe(el));
 })();
 
 </script>
