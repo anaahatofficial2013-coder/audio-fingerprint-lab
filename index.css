@@ -242,7 +242,57 @@
     transition-delay:var(--reveal-delay,0ms);
   }
   .has-js :where(#hero > *,#nowBox,.grid .panel,.wide .panel,.foot).is-visible{opacity:1;transform:none}
+
+  /* mechanical fingerprint instrument */
+  .mech-strip,.process-rail{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text-muted);font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none}
+  .mech-strip{gap:12px;margin:0 auto 18px}
+  .mech-gear{position:relative;width:14px;height:14px;flex:0 0 14px;border:1px solid var(--accent);border-radius:50%;background:var(--bg-primary)}
+  .mech-gear::before{content:'';position:absolute;inset:-5px;border:1px dashed var(--border);border-radius:50%;animation:mech-spin 18s linear infinite}
+  .mech-gear::after{content:'';position:absolute;inset:4px;border:1px solid var(--border);border-radius:50%}
+  .mech-gear--small{width:10px;height:10px;flex-basis:10px}
+  .mech-gear--small::before{inset:-4px;animation-duration:12s;animation-direction:reverse}
+  .mech-wave{position:relative;width:min(220px,34vw);height:16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:repeating-linear-gradient(90deg,transparent 0 11px,var(--border) 11px 12px)}
+  .mech-wave::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+  .mech-wave::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;border:1px solid var(--accent);background:var(--bg-primary);transform:translate(-50%,-50%) rotate(45deg)}
+  .mech-readout{white-space:nowrap}
+  .process-rail{margin:18px auto 0}
+  .process-rail span{color:var(--text-secondary)}
+  .process-rail > i{position:relative;width:26px;height:1px;background:var(--border)}
+  .process-rail > i::after{content:'';position:absolute;right:-1px;top:-2px;border-left:4px solid var(--accent);border-top:2.5px solid transparent;border-bottom:2.5px solid transparent}
+  @keyframes mech-spin{to{transform:rotate(360deg)}}
+
+  .mic-orbit{--orbit:92px;position:absolute;inset:0;pointer-events:none;animation:mech-spin 44s linear infinite}
+  .mic-orbit i{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(193,138,82,.12);transform:rotate(var(--a)) translateY(calc(0px - var(--orbit)))}
+  .mic-orbit i:nth-child(1){--a:0deg}
+  .mic-orbit i:nth-child(2){--a:45deg}
+  .mic-orbit i:nth-child(3){--a:90deg}
+  .mic-orbit i:nth-child(4){--a:135deg}
+  .mic-orbit i:nth-child(5){--a:180deg}
+  .mic-orbit i:nth-child(6){--a:225deg}
+  .mic-orbit i:nth-child(7){--a:270deg}
+  .mic-orbit i:nth-child(8){--a:315deg}
+  .mic-orbit i:nth-child(3n){background:var(--text-muted);box-shadow:none}
+
+  .mech-seal{position:relative;width:132px;height:132px;margin:8px auto 0;pointer-events:none}
+  .mech-seal__ring{position:absolute;inset:0;border:1px dashed var(--border);border-radius:50%;animation:mech-spin 30s linear infinite}
+  .mech-seal__ring::before{content:'';position:absolute;inset:10px;border:1px solid rgba(193,138,82,.35);border-radius:50%}
+  .mech-seal__ring--2{inset:18px;border-style:dotted;animation-duration:22s;animation-direction:reverse}
+  .mech-seal__ring--2::before{inset:8px;border-color:rgba(166,163,156,.22)}
+  .mech-seal__pips{--orbit:58px;position:absolute;inset:0;animation:mech-spin 16s linear infinite reverse}
+  .mech-seal__pips i{position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:var(--accent);transform:rotate(var(--a)) translateY(calc(0px - var(--orbit)))}
+  .mech-seal__pips i:nth-child(1){--a:0deg}
+  .mech-seal__pips i:nth-child(2){--a:60deg}
+  .mech-seal__pips i:nth-child(3){--a:120deg}
+  .mech-seal__pips i:nth-child(4){--a:180deg}
+  .mech-seal__pips i:nth-child(5){--a:240deg}
+  .mech-seal__pips i:nth-child(6){--a:300deg}
+  .mech-seal__core{position:absolute;inset:0;display:grid;place-items:center;font-size:.625rem;color:var(--accent);letter-spacing:.08em}
+
+  @media(max-width:860px){.mic-orbit{--orbit:78px}}
+  @media(max-width:520px){.mech-readout{display:none}.mech-wave{width:min(160px,50vw)}}
+
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto;scroll-padding-top:0}
     .has-js :where(#hero > *,#nowBox,.grid .panel,.wide .panel,.foot){opacity:1!important;transform:none!important;transition:none!important}
+    .mech-gear::before,.mic-orbit,.mech-seal__ring,.mech-seal__ring--2,.mech-seal__pips{animation:none!important}
   }

@@ -16,6 +16,12 @@
 <main>
   <section id="hero">
     <div class="eyebrow">Audio fingerprint lab</div>
+    <div class="mech-strip mono" aria-hidden="true">
+      <span class="mech-gear"></span>
+      <span class="mech-wave"></span>
+      <span class="mech-readout">FFT · PEAKS · PAIRS · VOTES</span>
+      <span class="mech-gear mech-gear--small"></span>
+    </div>
     <h1>How does Shazam recognise a song in seconds?</h1>
     <p class="thesis">It doesn't listen to the song. It picks a few loud dots, then remembers each pair by its two frequencies and the time between them.</p>
     <div class="steps">
@@ -28,7 +34,10 @@
       <div class="demo-buttons" id="demoButtons"></div>
       <a class="view-db" id="viewDb" href="about.html#database">View database &#8594;</a>
     </div>
-    <div class="mic-wrap"><button id="micBtn" class="mic">&#127908;</button></div>
+    <div class="mic-wrap">
+      <div class="mic-orbit" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <button id="micBtn" class="mic">&#127908;</button>
+    </div>
     <div id="micError" class="mic-error hidden"></div>
     <div class="wave-hint">
       <canvas id="idleWave" class="idle-wave" width="600" height="44"></canvas>
