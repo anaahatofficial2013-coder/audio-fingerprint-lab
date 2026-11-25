@@ -4,7 +4,7 @@
 
 Audio Fingerprint Lab is a static, browser-based demonstration of constellation audio fingerprinting. It turns microphone or uploaded audio into spectral peaks, hashes pairs of peaks, and votes for songs whose stored hashes align at the same time offset.
 
-The project contains 51 prebuilt tracks and can also fingerprint local audio files in the browser. It does not require a backend, API key, account, or build step.
+The project contains 10 prebuilt tracks and can also fingerprint local audio files in the browser. It does not require a backend, API key, account, or build step.
 
 ## Quick Start
 
