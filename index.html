@@ -76,8 +76,8 @@
     </div>
     <div class="col">
       <section id="secMatch" class="panel hidden">
-        <div class="section-title">Match panel <span class="tag">TOP 3 · 3s WINDOW</span></div>
-        <div class="hash-ratio mono"><span id="hashMatch">0</span>/<span id="hashTotal">0</span> hashes match</div>
+        <div class="section-title">Match panel <span class="tag">TOP 3 · 5s VOTES</span></div>
+        <div class="hash-ratio mono"><span id="voteMatch">0</span>/<span id="voteTotal">0</span> aligned votes</div>
         <div class="match-conf-row">
           <div class="conf match-conf"><i id="matchConfBar"></i></div>
           <span id="matchConfLabel" class="mono">0%</span>
@@ -105,7 +105,7 @@
         <input id="noiseSlider" type="range" min="0" max="1" step="0.01" value="0">
         <span id="noiseVal" class="mono">0.00</span>
       </div>
-      <div class="chain mono"><span>peaks <b id="mPeaks">0</b></span><span>&#8594;</span><span>hashes <b id="mHashes">0</b></span><span>&#8594;</span><span>collisions <b id="mColl">0</b></span></div>
+      <div class="chain mono"><span>peaks <b id="mPeaks">0</b></span><span>&#8594;</span><span>hashes <b id="mHashes">0</b></span><span>&#8594;</span><span>votes <b id="mVotes">0</b></span></div>
       <div class="conf"><i id="confBar"></i></div>
       <p class="hint">Turn up the noise. Some dots disappear, but the <b>lines between the survivors</b> keep matching. That's the whole trick.</p>
     </section>
@@ -372,10 +372,53 @@ function hashVariants(hash){
   VARIANT_CACHE.set(hash,out);
   return out;
 }
+// Time-offset voting is the only identification score. A hash collision casts
+// a vote for the song-relative shift that would line the live hash up with the
+// stored one. No set-overlap similarity score is involved.
+const VOTE_WINDOW=5, VOTE_BIN_SPAN=1;
+const VOTE_MIN_VOTES=5, VOTE_MIN_HASHES=4, VOTE_MIN_BUCKETS=3;
+function offsetBin(offset){ return Math.round(offset/OFFSET_BIN); }
+function binVotes(bins, bin){
+  const here=bins.get(bin);
+  let n=here?here.raw:0;
+  for(const d of [-VOTE_BIN_SPAN,VOTE_BIN_SPAN]){
+    const near=bins.get(bin+d);
+    if(near) n+=near.raw;
+  }
+  return n;
+}
+function scoreTimeOffsetVotes(card,tNow){
+  card.hits=card.hits.filter(h=>tNow-h.time<=VOTE_WINDOW);
+  const bins=new Map();
+  for(const h of card.hits){
+    const b=offsetBin(h.offset);
+    let e=bins.get(b);
+    if(!e){ e={raw:0}; bins.set(b,e); }
+    e.raw+=h.w||1;
+  }
+  let bestBin=0,bestVotes=0;
+  for(const b of bins.keys()){
+    const n=binVotes(bins,b);
+    if(n>bestVotes){ bestVotes=n; bestBin=b; }
+  }
+  let nextVotes=0;
+  for(const [b,e] of bins){
+    if(Math.abs(b-bestBin)<=VOTE_BIN_SPAN) continue;
+    if(e.raw>nextVotes) nextVotes=e.raw;
+  }
+  const aligned=card.hits.filter(h=>Math.abs(offsetBin(h.offset)-bestBin)<=VOTE_BIN_SPAN);
+  const hashes=new Set(aligned.map(h=>h.queryHash||h.hash));
+  const buckets=new Set(aligned.map(h=>Math.round(h.time/0.25)));
+  return {
+    votes:bestVotes, nextVotes, aligned,
+    hashes:hashes.size, buckets:buckets.size,
+    totalHits:card.hits.length,
+  };
+}
 // The match panel only ever shows the three strongest candidates.
 function topCards(){
   return state.cards.filter(c=>!c.hidden)
-    .sort((a,b)=>(b.matched-a.matched)||(b.collisions-a.collisions))
+    .sort((a,b)=>(b.matched-a.matched)||((b.votes||0)-(a.votes||0)))
     .slice(0,3);
 }
 function renderCards(){
@@ -396,7 +439,7 @@ function renderCards(){
     const coll=document.createElement('div');
     coll.className='card-coll mono';
     coll.id='coll'+idx;
-    coll.textContent=card.collisions;
+    coll.textContent=card.votes||0;
     const conf=document.createElement('div');
     conf.className='card-conf mono';
     conf.id='conf'+idx;
@@ -490,8 +533,8 @@ async function startEngine(){
       const index=new Map(validIndex.map(x=>[x[0].toUpperCase(),x[1]]));
       state.cards.push({
         name:s.name, hidden:false, sequence:null, buffer:null, ready:true, userAdded:true,
-        hashIndex:index, hashSet:new Set(index.keys()), collisions:0, matched:false,
-        matchedPeakIds:new Set(), hits:[], counts:new Map(),
+        hashIndex:index, votes:0, voteHashes:0, voteBuckets:0, matched:false,
+        matchedPeakIds:new Set(), hits:[],
       });
     });
   }catch(e){
@@ -503,8 +546,8 @@ async function startEngine(){
     state.cards.push({
       name:song.name, hidden:false, sequence:null, buffer:null, ready:true, builtin:true,
       hashIndex:new Map((song.index||[]).map(x=>[x[0],x[1]])),
-      hashSet:new Set((song.index||[]).map(x=>x[0])), collisions:0, matched:false,
-      matchedPeakIds:new Set(), hits:[], counts:new Map(),
+      votes:0, voteHashes:0, voteBuckets:0, matched:false,
+      matchedPeakIds:new Set(), hits:[],
     });
   }
 
@@ -575,7 +618,8 @@ function stopMic(){
   state.peaks=[]; state.hashes=[]; state.hashedPairs.clear();
   state.winner=null; state.decision='stopped'; state.listenStart=null;
   state.cards.forEach(c=>{
-    c.matched=false; c.collisions=0; c.weighted=0; c.hits=[]; c.matchedPeakIds=new Set();
+    c.matched=false; c.votes=0; c.voteHashes=0; c.voteBuckets=0;
+    c.hits=[]; c.matchedPeakIds=new Set();
   });
   $('micToggle').textContent='Start mic';
   $('micState').textContent='off';
@@ -620,7 +664,7 @@ function updateHashes(){
           if(!times) continue;
           state.dbg.hits++;
           for(const dbt of times){
-            card.hits.push({hash:variant.hash,time:anchor.t,dbt:dbt,offset:anchor.t-dbt,a:anchor.id,b:target.id,w:variant.w});
+            card.hits.push({hash:variant.hash,queryHash:hash,time:anchor.t,dbt:dbt,offset:anchor.t-dbt,a:anchor.id,b:target.id,w:variant.w});
             if(card.hits.length>1800) card.hits.shift();
           }
         }
@@ -642,49 +686,40 @@ function updateHashes(){
     if(state.decision==='listening') state.decision='scanning';
   }
 
-  // Shazam-style alignment: votes for the SAME song-relative time offset.
+  // Pure time-offset voting: songs are identified only by aligned hash votes.
   for(const card of state.cards){
-    card.hits=card.hits.filter(h=>tNow-h.time<=5);
-    const hist=new Map();
-    for(const h of card.hits){
-      const b=Math.round(h.offset/OFFSET_BIN);
-      hist.set(b,(hist.get(b)||0)+(h.w||1));
-    }
-    let bestBin=0,bestCount=0;
-    const smoothed=[];
-    for(const [b,c] of hist){
-      const smooth=c+(hist.get(b-1)||0)+(hist.get(b+1)||0);
-      smoothed.push(smooth);
-      if(smooth>bestCount){bestCount=smooth;bestBin=b;}
-    }
-    smoothed.sort((a,b)=>b-a);
-    const secondCount=smoothed.length>1?smoothed[1]:0;
-    const aligned=card.hits.filter(h=>Math.abs(Math.round(h.offset/OFFSET_BIN)-bestBin)<=1);
-    const supporting=new Set(aligned.map(h=>h.hash));
-    const buckets=new Set(aligned.map(h=>Math.round(h.time/0.25)));
-
-    card.collisions=Math.round(bestCount);
-    card.weighted=bestCount;
-    card.totalCollisions=card.hits.length;
-    card.topBin=bestCount;
-    card.secondBin=secondCount;
-    card.matchedHashes=supporting.size;
+    const result=scoreTimeOffsetVotes(card,tNow);
+    card.votes=result.votes;
+    card.nextVotes=result.nextVotes;
+    card.voteHashes=result.hashes;
+    card.voteBuckets=result.buckets;
+    card.totalHits=result.totalHits;
+    card.topBin=result.votes;
+    card.secondBin=result.nextVotes;
     card.queryTotal=recentHashes.length;
-    card.buckets=buckets.size;
-    card.confidence=Math.min(99,Math.round(card.collisions/(card.collisions+3)*100));
     card.matchedPeakIds=new Set();
-    aligned.forEach(h=>{card.matchedPeakIds.add(h.a);card.matchedPeakIds.add(h.b);});
+    result.aligned.forEach(h=>{card.matchedPeakIds.add(h.a);card.matchedPeakIds.add(h.b);});
   }
-  const ranked=state.cards.filter(c=>!c.hidden).sort((a,b)=>(b.weighted||0)-(a.weighted||0));
+  const ranked=state.cards.filter(c=>!c.hidden).sort((a,b)=>
+    (b.votes||0)-(a.votes||0) ||
+    (b.voteHashes||0)-(a.voteHashes||0) ||
+    (b.voteBuckets||0)-(a.voteBuckets||0));
   const top=ranked[0], second=ranked[1];
+  const rivalVotes=second?(second.votes||0):0;
+  state.cards.forEach(c=>{
+    const rival=(c===top)?rivalVotes:(top?(top.votes||0):0);
+    const v=c.votes||0;
+    c.confidence=Math.min(99,Math.round(v/(v+rival+3)*100));
+  });
   const enoughAudio=state.listenStart!==null && (tNow-state.listenStart)>=5;
-  const clearWinner=top && (!second || (second.weighted||0)===0 || top.weighted>=second.weighted*2);
-  state.winner=(active && enoughAudio && clearWinner && top.weighted>=5 &&
-    top.matchedHashes>=5 && top.buckets>=3) ? top : null;
+  const clearWinner=top && (!rivalVotes || top.votes>=rivalVotes*2);
+  const singleCluster=top && (!top.nextVotes || top.votes>=top.nextVotes*2);
+  const supported=top && top.votes>=VOTE_MIN_VOTES &&
+    top.voteHashes>=VOTE_MIN_HASHES && top.voteBuckets>=VOTE_MIN_BUCKETS;
+  state.winner=(active && enoughAudio && clearWinner && singleCluster && supported) ? top : null;
   state.cards.forEach(c=>{ c.matched=(c===state.winner); });
-  const dbgBest=top, dbgSecond=second;
-  state.dbg.lastMarginAbs=dbgBest&&dbgSecond?(dbgBest.weighted||0)-(dbgSecond.weighted||0):0;
-  state.dbg.lastMarginRatio=dbgBest&&dbgSecond&&dbgSecond.weighted>0?(dbgBest.weighted||0)/dbgSecond.weighted:0;
+  state.dbg.lastMarginAbs=top?(top.votes||0)-rivalVotes:0;
+  state.dbg.lastMarginRatio=top&&rivalVotes>0?(top.votes||0)/rivalVotes:0;
   const leadCard=state.winner||topCards()[0];
   state.confidence=leadCard?(leadCard.confidence||0):0;
 
@@ -771,8 +806,8 @@ function renderChain(){
   const now=state.ctx.currentTime;
   $('mPeaks').textContent=state.peaks.filter(p=>now-p.t<=1).length;
   $('mHashes').textContent=state.hashes.filter(h=>now-(h.t+state.sessionStart)<=3).length;
-  const coll=state.winner?state.winner.collisions:Math.max(0,...state.cards.map(c=>c.collisions));
-  $('mColl').textContent=coll;
+  const votes=state.winner?state.winner.votes:Math.max(0,...state.cards.map(c=>c.votes||0));
+  $('mVotes').textContent=votes;
   $('confBar').style.width=state.confidence+'%';
 }
 
@@ -844,16 +879,16 @@ function renderCardsUpdate(){
   if(!same) renderCards();
   list.forEach((card,idx)=>{
     const collEl=$('coll'+idx);
-    if(collEl) collEl.textContent=card.collisions;
+    if(collEl) collEl.textContent=card.votes||0;
     const confEl=$('conf'+idx);
     if(confEl) confEl.textContent=(card.confidence||0)+'% match';
     const cardEl=$('card'+idx);
     if(cardEl){
       if(card.matched) cardEl.classList.add('matched'); else cardEl.classList.remove('matched');
-      cardEl.style.setProperty('--pct',Math.min(100,card.collisions*10)+'%');
+      cardEl.style.setProperty('--pct',Math.min(100,(card.votes||0)*10)+'%');
     }
     const whyEl=$('why'+idx);
-    if(whyEl) whyEl.textContent=card.matched ? 'Why: '+card.collisions+' hashes' : '';
+    if(whyEl) whyEl.textContent=card.matched ? 'Why: '+card.votes+' aligned votes' : '';
     const stEl=$('st'+idx);
     if(stEl) stEl.textContent=card.ready===false ? 'Fingerprinting…' : '';
   });
@@ -863,8 +898,8 @@ function renderCardsUpdate(){
   if(bar) bar.style.width=pct+'%';
   const label=$('matchConfLabel');
   if(label) label.textContent=pct+'%';
-  const hm=$('hashMatch'), ht=$('hashTotal');
-  if(hm) hm.textContent=lead?(lead.matchedHashes||0):0;
+  const hm=$('voteMatch'), ht=$('voteTotal');
+  if(hm) hm.textContent=lead?(lead.voteHashes||0):0;
   if(ht) ht.textContent=lead?(lead.queryTotal||0):0;
 }
 
@@ -881,7 +916,7 @@ function debugReport(){
   const peaksPerSec=state.dbg.peakFrames.reduce((n,f)=>n+f.n,0);
   const songs=state.cards.filter(c=>!c.hidden).map(c=>({
     song:c.name,
-    totalCollisions:c.totalCollisions||0,
+    totalHits:c.totalHits||0,
     topBin:Math.round(c.topBin||0),
     secondBin:Math.round(c.secondBin||0),
   })).sort((a,b)=>b.topBin-a.topBin);
@@ -911,13 +946,13 @@ function renderDebug(tNow, recentHashes){
   const body=$('debugBody');
   if(!body) return;
   const lines=r.songs.slice(0,12).map(s=>
-    s.song.slice(0,20).padEnd(21)+' tot '+String(s.totalCollisions).padStart(4)+
+    s.song.slice(0,20).padEnd(21)+' hits '+String(s.totalHits).padStart(4)+
     ' top '+String(s.topBin).padStart(4)+' 2nd '+String(s.secondBin).padStart(4));
   body.textContent='peaks/s '+r.peaksPerSec+' · query hashes '+r.queryHashes+
     ' ('+recentHashes+'/3s) · total '+r.hashTotal+
     '\nlookup hits '+r.lookupHits+'/'+r.lookups+
     ' · margin '+r.marginAbs+' ('+r.marginRatio+'x)\n\n'+
-    'song                 total  top  2nd\n'+lines.join('\n')+
+    'song                 hits   top  2nd\n'+lines.join('\n')+
     (r.songs.length>12?'\n… '+(r.songs.length-12)+' more in console':'');
 }
 
@@ -964,7 +999,7 @@ async function runSelfTest(){
     resetDebug();
     state.listenStart=null; state.winner=null; state.decision='scanning';
     state.peaks=[]; state.hashes=[]; state.hashedPairs.clear();
-    state.cards.forEach(c=>{ c.hits=[]; c.weighted=0; });
+    state.cards.forEach(c=>{ c.hits=[]; c.votes=0; c.matchedPeakIds=new Set(); });
     if(body) body.textContent='Playing '+(i+1)+'/8: '+name+'\nKeep the mic near your speakers.';
     const source=ctx.createBufferSource(), gain=ctx.createGain();
     source.buffer=testClipBuffer(ctx,clip);
@@ -1100,10 +1135,9 @@ async function addSongFile(file){
     const buffer=await state.ctx.decodeAudioData(ab);
     const name=file.name.replace(/\.[^.]+$/,'').slice(0,28);
     const card={name:name, hidden:false, sequence:null, buffer:buffer, ready:false,
-      hashIndex:new Map(), hashSet:new Set(), counts:new Map(), collisions:0,
+      hashIndex:new Map(), votes:0, voteHashes:0, voteBuckets:0,
       matched:false, matchedPeakIds:new Set(), hits:[]};
     card.hashIndex=buildHashesFromPCM(buffer.getChannelData(0),buffer.sampleRate);
-    card.hashSet=new Set(card.hashIndex.keys());
     card.ready=true;
     state.cards.push(card);
     saveLibrary();
@@ -1368,7 +1402,7 @@ async function runGuidedTour(){
     [5,'#hashList','Anchor pairs generate unique hashes.','#C18A52'],
     [6,'#secPlayer','Your hashes search this song library.','#C18A52'],
     [7,'#noiseSlider','Drag to add noise. Match still works.','#C18A52'],
-    [8,'#cards .card-coll','Collisions rising means a match found.','#78977B'],
+    [8,'#cards .card-coll','Aligned votes rising means a match found.','#78977B'],
   ];
   for(const [n,sel,text,color] of steps){
     let target=document.querySelector(sel);
