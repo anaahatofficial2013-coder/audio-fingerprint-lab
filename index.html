@@ -5,24 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="A browser-based visualization of constellation audio fingerprinting and Shazam-style hash matching.">
 <title>Shazam Fingerprint Visualiser</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400&family=Instrument+Serif&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="index.css">
 <script>document.documentElement.classList.add('has-js');</script>
 </head>
 <body>
 <canvas id="bgTexture"></canvas>
-<div class="logo">Techrotians Squad</div>
+<canvas id="bgInteraction" aria-hidden="true"></canvas>
 <a class="about-link" href="about.html">How does this work? &#8594;</a>
 <main>
   <section id="hero">
-    <div class="eyebrow">Audio fingerprint lab</div>
+    <div class="brand-lockup">
+      <div class="brand-wordmark"><span>Audio</span><span>Fingerprint</span><span>Lab</span></div>
+      <div class="brand-credit">by Techrotians Squad</div>
+    </div>
     <div class="mech-strip mono" aria-hidden="true">
-      <span class="mech-gear"></span>
       <span class="mech-wave"></span>
       <span class="mech-readout">FFT · PEAKS · PAIRS · VOTES</span>
-      <span class="mech-gear mech-gear--small"></span>
     </div>
-    <h1>How does Shazam recognise a song in seconds?</h1>
+    <h1>how does shazam recognise a song in seconds?</h1>
     <p class="thesis">It doesn't listen to the song. It picks a few loud dots, then remembers each pair by its two frequencies and the time between them.</p>
     <div class="steps">
       <div><b>01</b><span>Tap the mic</span></div>
@@ -35,7 +36,6 @@
       <a class="view-db" id="viewDb" href="about.html#database">View database &#8594;</a>
     </div>
     <div class="mic-wrap">
-      <div class="mic-orbit" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <button id="micBtn" class="mic">&#127908;</button>
     </div>
     <div id="micError" class="mic-error hidden"></div>
@@ -224,6 +224,96 @@
   draw();
   let timer=0;
   window.addEventListener('resize',function(){clearTimeout(timer);timer=setTimeout(draw,120);});
+})();
+
+/* ---------- Pointer-reactive background grain ---------- */
+(function(){
+  const cv=document.getElementById('bgInteraction');
+  if(!cv) return;
+  const ctx=cv.getContext('2d');
+  if(!ctx) return;
+
+  let width=0,height=0,dpr=1,targetX=0,targetY=0,x=0,y=0;
+  let hasPointer=false,pointerDown=false,lastMove=0,frame=0;
+  const ripples=[];
+
+  function schedule(){
+    if(!frame) frame=requestAnimationFrame(render);
+  }
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    width=window.innerWidth;height=window.innerHeight;
+    cv.width=Math.round(width*dpr);cv.height=Math.round(height*dpr);
+    cv.style.width=width+'px';cv.style.height=height+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    schedule();
+  }
+  function moveTo(e){
+    targetX=e.clientX;targetY=e.clientY;
+    if(!hasPointer){x=targetX;y=targetY;hasPointer=true;}
+    lastMove=performance.now();
+    schedule();
+  }
+  function drawGrain(cx,cy,radius,intensity,count){
+    for(let i=0;i<count;i++){
+      const angle=Math.random()*Math.PI*2;
+      const distance=Math.sqrt(Math.random())*radius;
+      const falloff=1-distance/radius;
+      const alpha=(.45+Math.random()*.42)*intensity*Math.sqrt(falloff);
+      const size=Math.random()<.65?1:Math.random()<.9?2:3;
+      ctx.fillStyle='rgba(166,163,156,'+alpha.toFixed(3)+')';
+      ctx.fillRect(cx+Math.cos(angle)*distance,cy+Math.sin(angle)*distance,size,size);
+    }
+  }
+  function drawGrainRipple(cx,cy,radius,intensity,progress){
+    const clusters=Math.round(12+progress*12);
+    for(let i=0;i<clusters;i++){
+      const centerAngle=Math.random()*Math.PI*2;
+      const grains=3+Math.floor(Math.random()*7);
+      for(let j=0;j<grains;j++){
+        const angle=centerAngle+(Math.random()-.5)*.42;
+        const distance=Math.max(0,radius+(Math.random()-.5)*(10+progress*24));
+        const alpha=(.35+Math.random()*.5)*intensity;
+        const size=Math.random()<.65?1:Math.random()<.9?2:3;
+        ctx.fillStyle='rgba(166,163,156,'+alpha.toFixed(3)+')';
+        ctx.fillRect(cx+Math.cos(angle)*distance,cy+Math.sin(angle)*distance,size,size);
+      }
+    }
+  }
+  function render(now){
+    frame=0;
+    ctx.clearRect(0,0,width,height);
+
+    const age=now-lastMove;
+    const intensity=pointerDown?1:Math.max(0,1-age/850);
+    if(hasPointer && intensity>.01){
+      x+=(targetX-x)*.24;y+=(targetY-y)*.24;
+      drawGrain(x,y,66, intensity, Math.round(1800+intensity*1500));
+    }
+
+    for(let i=ripples.length-1;i>=0;i--){
+      const ripple=ripples[i],progress=Math.max(0,(now-ripple.time)/1050);
+      if(progress>=1){ripples.splice(i,1);continue;}
+      const radius=progress*260;
+      drawGrainRipple(ripple.x,ripple.y,radius,(1-progress)*.85,progress);
+    }
+
+    if((hasPointer && intensity>.01) || ripples.length) schedule();
+  }
+
+  window.addEventListener('pointermove',moveTo,{passive:true});
+  window.addEventListener('pointerdown',function(e){
+    moveTo(e);
+    pointerDown=true;
+    ripples.push({x:e.clientX,y:e.clientY,time:performance.now()});
+    if(ripples.length>5) ripples.shift();
+    schedule();
+  },{passive:true});
+  window.addEventListener('pointerup',function(){pointerDown=false;});
+  window.addEventListener('pointercancel',function(){pointerDown=false;});
+  window.addEventListener('blur',function(){pointerDown=false;});
+  window.addEventListener('resize',resize,{passive:true});
+  resize();
 })();
 
 const $ = id => document.getElementById(id);
