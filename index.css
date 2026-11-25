@@ -42,6 +42,20 @@
   .brand-wordmark{color:var(--text-primary);font:italic 400 clamp(1.5rem,8vw,5.5rem)/.9 var(--serif);letter-spacing:-.07em;text-transform:uppercase}
   .brand-wordmark span{display:block}
   .brand-credit{margin-top:8px;color:var(--text-muted);font:400 .875rem/1.4 var(--sans)}
+  .brand-row{display:flex;align-items:center;justify-content:space-between;gap:32px;max-width:1120px;margin:0 auto}
+  .brand-lockup{min-width:0}
+  .vinyl-scene{position:relative;flex:0 0 220px;width:220px;height:220px;perspective:800px;pointer-events:none}
+  .vinyl-scene::before{content:'';position:absolute;inset:28px;border:1px dashed rgba(57,56,51,.9);border-radius:50%}
+  .vinyl-scene::after{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border:1px solid rgba(193,138,82,.5);border-radius:50%}
+  .vinyl-orbit{position:absolute;inset:0;animation:vinyl-orbit 14s linear infinite;transform-style:preserve-3d}
+  .vinyl-tilt{position:absolute;left:50%;top:50%;width:132px;height:132px;margin:-66px;transform:translate3d(56px,-18px,0) rotateX(58deg) rotateY(-12deg);transform-style:preserve-3d}
+  .vinyl-disc{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(193,138,82,.55);background:radial-gradient(circle at 32% 24%,rgba(242,239,233,.15),transparent 28%),repeating-radial-gradient(circle at center,#242422 0 4px,#171717 4px 8px,#393833 8px 9px);box-shadow:0 18px 30px rgba(0,0,0,.55),inset 0 0 0 6px rgba(0,0,0,.32);animation:vinyl-spin 2.6s linear infinite;transform-style:preserve-3d}
+  .vinyl-disc::after{content:'';position:absolute;inset:-4px;border:1px solid rgba(193,138,82,.18);border-radius:50%;transform:translateZ(-5px)}
+  .vinyl-sheen{position:absolute;inset:7px;border-radius:50%;background:conic-gradient(from 210deg,transparent 0 18%,rgba(242,239,233,.13) 24%,transparent 30% 64%,rgba(193,138,82,.14) 70%,transparent 76%)}
+  .vinyl-label{position:absolute;left:50%;top:50%;display:grid;place-items:center;width:38px;height:38px;margin:-19px;border-radius:50%;background:#C18A52;color:#171717;font:600 .5rem var(--mono);letter-spacing:.08em;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+  .vinyl-hole{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#171717;box-shadow:0 0 0 1px rgba(242,239,233,.25)}
+  @keyframes vinyl-orbit{to{transform:rotate(360deg)}}
+  @keyframes vinyl-spin{to{transform:rotateZ(360deg)}}
   .eyebrow{display:inline-flex;align-items:center;gap:8px;font:400 .75rem var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--status-info);border:1px solid var(--border);background:var(--surface-card);padding:8px 16px;border-radius:999px}
   h1{font:italic 400 clamp(3.25rem,5vw,4rem)/1.1 var(--serif);letter-spacing:.02em;margin:32px auto 24px;max-width:880px;color:var(--text-primary)}
   .thesis{max-width:690px;margin:0 auto 32px;color:var(--text-secondary);font:400 1rem/1.6 var(--sans)}
@@ -271,11 +285,34 @@
   .mech-seal__core{position:absolute;inset:0;display:grid;place-items:center;font-size:.625rem;color:var(--accent);letter-spacing:.08em}
 
   @media(max-width:520px){.mech-readout{display:none}.mech-wave{width:min(160px,50vw)}}
+  @media(max-width:900px){
+    .brand-row{gap:16px}
+    .vinyl-scene{flex-basis:170px;width:170px;height:170px}
+    .vinyl-scene::before{inset:22px}
+    .vinyl-tilt{width:104px;height:104px;margin:-52px;transform:translate3d(42px,-14px,0) rotateX(58deg) rotateY(-12deg)}
+    .vinyl-label{width:30px;height:30px;margin:-15px;font-size:.44rem}
+  }
+  @media(max-width:680px){
+    .brand-row{position:relative;display:block;padding-right:112px}
+    .vinyl-scene{position:absolute;right:0;top:-18px;flex-basis:auto;width:132px;height:132px}
+    .vinyl-scene::before{inset:16px}
+    .vinyl-tilt{width:88px;height:88px;margin:-44px;transform:translate3d(30px,-10px,0) rotateX(58deg) rotateY(-12deg)}
+    .vinyl-label{width:26px;height:26px;margin:-13px;font-size:.4rem}
+  }
+  @media(max-width:440px){
+    .brand-row{padding-right:84px}
+    .vinyl-scene{width:96px;height:96px;top:-8px}
+    .vinyl-scene::before{inset:10px}
+    .vinyl-tilt{width:68px;height:68px;margin:-34px;transform:translate3d(23px,-7px,0) rotateX(58deg) rotateY(-12deg)}
+    .vinyl-label{width:20px;height:20px;margin:-10px;font-size:.34rem;letter-spacing:0}
+    .vinyl-hole{width:4px;height:4px;margin:-2px}
+  }
 
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto;scroll-padding-top:0}
     .has-js :where(#hero > *,#nowBox,.grid .panel,.wide .panel,.foot){opacity:1!important;transform:none!important;transition:none!important}
     .mech-seal__ring,.mech-seal__ring--2,.mech-seal__pips{animation:none!important}
+    .vinyl-orbit,.vinyl-disc{animation:none!important}
   }
 
   /* Instrument Serif for capsules, chips and small rounded labels */
