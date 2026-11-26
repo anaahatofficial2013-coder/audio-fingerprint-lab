@@ -622,11 +622,13 @@ function renderCards(){
 
 function renderNow(){
   const el=$('nowName'), label=$('nowLabel'), box=$('nowBox');
+  // Any song currently on top of the vote takes the headline slot, instead of
+  // sitting behind the "Scanning" status text.
+  const lead=state.winner||state.scanCandidate||topCards()[0];
+  const leading=lead && (lead.votes||0)>0;
   let text, kind;
-  if(state.winner){
-    label.textContent='Now playing'; text=state.winner.name; kind='known';
-  } else if(state.scanCandidate){
-    label.textContent='Scanning'; text=state.scanCandidate.name; kind='scanning';
+  if(leading){
+    label.textContent='Now playing'; text=lead.name; kind='known';
   } else if(state.decision==='unknown'){
     label.textContent='Result'; text="I don't recognise this song"; kind='unknown';
   } else if(state.decision==='stopped'){
@@ -640,8 +642,10 @@ function renderNow(){
   box.dataset.state=kind;
   const pill=$('nowConf');
   if(pill){
-    if(state.winner){ pill.textContent=state.confidence+'% match'; pill.classList.remove('hidden'); }
-    else pill.classList.add('hidden');
+    if(leading){
+      pill.textContent=state.confidence+'% match';
+      pill.classList.remove('hidden');
+    } else pill.classList.add('hidden');
   }
 }
 
@@ -879,7 +883,11 @@ function updateHashes(){
   state.cards.forEach(c=>{
     const rival=(c===top)?rivalVotes:(top?(top.votes||0):0);
     const v=c.votes||0;
-    c.confidence=Math.min(99,Math.round(v/(v+rival+3)*100));
+    // Share of the vote the card is collecting. Capped at 100, and a clear
+    // leader with no rival reaches 100 instead of stalling just short of it.
+    let conf=Math.round(v/(v+rival+3)*100);
+    if(c===top && !rival && v>=20) conf=100;
+    c.confidence=Math.min(100,conf);
   });
   const enoughAudio=state.listenStart!==null && (tNow-state.listenStart)>=5;
   const clearWinner=top && (!rivalVotes || top.votes>=rivalVotes*1.3);
