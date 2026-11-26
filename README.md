@@ -1,10 +1,14 @@
 # Audio Fingerprint Lab
 
-**Live demo:** https://arush4213.github.io/audio-fingerprint-lab/
+<img width="2844" height="1530" alt="Screenshot 2026-11-26 090216" src="https://github.com/user-attachments/assets/1a500ec2-aac9-461d-9a51-3f3d7a2f9303" />
+
+<img width="2840" height="1528" alt="Screenshot 2026-11-26 090258" src="https://github.com/user-attachments/assets/71fce8a7-a972-4c9c-a60d-58ed7a895cf0" />
+
+**Live demo:** [Vercel - Audio Fingerprint Lab](https://audio-fingerprint-lab.vercel.app/)
 
 Audio Fingerprint Lab is a static, browser-based demonstration of constellation audio fingerprinting. It turns microphone or uploaded audio into spectral peaks, hashes pairs of peaks, and votes for songs whose stored hashes align at the same time offset.
 
-The project contains 51 prebuilt tracks and can also fingerprint local audio files in the browser. It does not require a backend, API key, account, or build step.
+The project contains 10 prebuilt tracks and can also fingerprint local audio files in the browser. It does not require a backend, API key, account, or build step.
 
 ## Quick Start
 
@@ -31,7 +35,7 @@ Then open `http://localhost:8000`.
 
 - Live FFT spectrum for the 0–4 kHz band
 - Constellation peak detection and hash visualization
-- 51 built-in song fingerprints
+- 10 built-in song fingerprints
 - Local audio upload and fingerprinting
 - Top-three match panel with aligned-vote confidence
 - Adjustable generated background noise
