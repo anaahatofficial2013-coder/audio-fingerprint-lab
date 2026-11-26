@@ -114,7 +114,7 @@
       <article class="step-card">
         <div class="step-num">04</div>
         <h3>Hash Matching</h3>
-        <p>Query hashes are looked up in a database indexed by hash value. Each collision casts a vote for the time shift that would line it up with the stored hash. Votes collect in 100 ms offset bins; the strongest candidate appears under Scanning as soon as it leads the runner-up by at least 2×. It becomes a confirmed match only when that cluster also has stronger or more diverse hash support than any second offset. No set-overlap similarity score is used.</p>
+        <p>Query hashes are looked up in a database indexed by hash value. Each collision casts a vote for the time shift that would line it up with the stored hash. Votes collect in 100 ms offset bins; the strongest candidate appears under Scanning as soon as it leads the runner-up by at least 1.8×. It becomes a confirmed match only when that cluster also has at least 15 distinct query hashes and stronger or more diverse hash support than any second offset. No set-overlap similarity score is used.</p>
         <svg viewBox="0 0 320 110">
           <g>
             <rect x="16" y="14" width="130" height="22" rx="6" fill="#242422" stroke="#393833"/>
