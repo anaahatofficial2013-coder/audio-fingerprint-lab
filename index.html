@@ -394,7 +394,13 @@ function freqToY(f){
   return H - (f/maxF)*H;
 }
 
-function binWidth(){ return state.ctx.sampleRate / state.analyser.fftSize; }
+function binWidth(sampleRate){ return (sampleRate||state.ctx.sampleRate) / state.analyser.fftSize; }
+// Internal test noise must never create fake peaks while the mic is off/blocked.
+function updateNoiseGain(){
+  if(!state.noiseGain || !state.ctx) return;
+  const v=state.micConnected ? Math.max(0,(+$('noiseSlider').value)||0) : 0;
+  state.noiseGain.gain.value=v*0.4;
+}
 
 // Own radix-2 FFT. The same function processes live mic samples and stored
 // audio, so a hash built from a file is directly comparable to a live hash.
@@ -428,12 +434,12 @@ function spectrum(samples,offset){
   return out;
 }
 
-const PEAK_TOP=2, PEAK_STD=2.5, PEAK_MIN_FREQ=50, PEAK_MIN_FRAMES=2;
+const PEAK_TOP=2, PEAK_STD=2.5, PEAK_MIN_FREQ=50, PEAK_MIN_FRAMES=2, TARGET_PAIRS=8;
 let lastPeakBins=new Map(), lastPeakFrame=-1;
-function pickPeaks(buf,frame=0){
+function pickPeaks(buf,frame=0,sampleRate){
   if(frame<=lastPeakFrame){ lastPeakBins=new Map(); }
   lastPeakFrame=frame;
-  const bw=binWidth();
+  const bw=binWidth(sampleRate);
   const maxBin=Math.floor(4000/bw);
   let sum=0,n=0,max=0;
   for(let i=1;i<maxBin-1;i++){sum+=buf[i];n++;if(buf[i]>max)max=buf[i];}
@@ -443,7 +449,7 @@ function pickPeaks(buf,frame=0){
   const std=n?Math.sqrt(sq/n):0;
   // Relative threshold keeps the same peaks at different mic volumes.
   const thr=Math.max(16,mean+PEAK_STD*std,max*0.32);
-  const found=[];
+  const candidates=[];
   for(let i=1;i<maxBin-1;i++){
     if(!(buf[i]>=buf[i-1] && buf[i]>buf[i+1] && buf[i]>=thr)) continue;
     const f=i*bw;
@@ -451,16 +457,26 @@ function pickPeaks(buf,frame=0){
     for(const [bin,lastFrame] of lastPeakBins){
       if(frame-lastFrame<PEAK_MIN_FRAMES && Math.abs(f-bin*bw)<PEAK_MIN_FREQ){ crowded=true; break; }
     }
-    if(crowded) continue;
-    lastPeakBins.set(i,frame);
-    found.push({bin:i,mag:buf[i],freq:f});
+    if(!crowded) candidates.push({bin:i,mag:buf[i],freq:f});
   }
-  found.sort((a,b)=>b.mag-a.mag);
-  return found.slice(0,PEAK_TOP);
+  // Rank before within-frame suppression so a weaker low-frequency peak cannot
+  // remove a stronger nearby peak that was visited later in the bin scan.
+  candidates.sort((a,b)=>b.mag-a.mag);
+  const found=[];
+  for(const c of candidates){
+    if(found.some(p=>Math.abs(c.freq-p.freq)<PEAK_MIN_FREQ)) continue;
+    lastPeakBins.set(c.bin,frame);
+    found.push(c);
+    if(found.length===PEAK_TOP) break;
+  }
+  return found;
 }
 
 // 7-bit frequencies + 5-bit time gap = 19-bit hash space.
 // A larger space means far fewer accidental collisions between songs.
+// Frequencies arrive in Hz, computed from the active device bin width. They are
+// quantised onto the fixed 44.1 kHz reference grid so a 48 kHz mic still produces
+// the same hash as the 44.1 kHz reference recording.
 const F_STEP = 44100/4096;
 const DT_STEP = 0.1, OFFSET_BIN = 0.1;
 function computeHash(f1,f2,dt){
@@ -476,15 +492,15 @@ function hashVariants(hash){
   if(VARIANT_CACHE.has(hash)) return VARIANT_CACHE.get(hash);
   const v=parseInt(hash,16), f1=(v>>12)&127, f2=(v>>5)&127, dt=v&31;
   const out=[];
-  const make=(a,b,d)=>(((a<<12)|(b<<5)|d)>>>0).toString(16).padStart(5,'0').toUpperCase();
+  const make=(a,b,d,exact)=>({hash:(((a<<12)|(b<<5)|d)>>>0).toString(16).padStart(5,'0').toUpperCase(),w:exact?9:1,exact});
   for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){
     const q1=f1+a, q2=f2+b;
     if(q1<0||q1>127||q2<0||q2>127) continue;
-    out.push({hash:make(q1,q2,dt), w:(a===0&&b===0)?9:1});
+    out.push(make(q1,q2,dt,a===0&&b===0));
   }
   for(const d of [dt-1,dt+1]){
     if(d<0||d>31) continue;
-    out.push({hash:make(f1,f2,d), w:1});
+    out.push(make(f1,f2,d,false));
   }
   VARIANT_CACHE.set(hash,out);
   return out;
@@ -493,7 +509,7 @@ function hashVariants(hash){
 // a vote for the song-relative shift that would line the live hash up with the
 // stored one. No set-overlap similarity score is involved.
 const VOTE_WINDOW=5, VOTE_BIN_SPAN=1;
-const VOTE_MIN_VOTES=5, VOTE_MIN_HASHES=15, VOTE_MIN_BUCKETS=3;
+const VOTE_MIN_VOTES=5, VOTE_MIN_HASHES=22, VOTE_MIN_BUCKETS=7, VOTE_MIN_EXACT_VOTES=72;
 const VOTE_SCAN_VOTES=30, VOTE_SCAN_HASHES=10;
 function offsetBin(offset){ return Math.round(offset/OFFSET_BIN); }
 function binVotes(bins, bin){
@@ -520,26 +536,45 @@ function scoreTimeOffsetVotes(card,tNow){
     if(n>bestVotes){ bestVotes=n; bestBin=b; }
   }
   let nextVotes=0, nextBin=0;
-  for(const [b,e] of bins){
+  for(const b of bins.keys()){
     if(Math.abs(b-bestBin)<=VOTE_BIN_SPAN) continue;
-    if(e.raw>nextVotes){ nextVotes=e.raw; nextBin=b; }
+    const n=binVotes(bins,b);
+    if(n>nextVotes){ nextVotes=n; nextBin=b; }
   }
   const aligned=card.hits.filter(h=>Math.abs(offsetBin(h.offset)-bestBin)<=VOTE_BIN_SPAN);
   const hashes=new Set(aligned.map(h=>h.queryHash||h.hash));
   const buckets=new Set(aligned.map(h=>Math.round(h.time/0.25)));
   const nextAligned=nextVotes?card.hits.filter(h=>Math.abs(offsetBin(h.offset)-nextBin)<=VOTE_BIN_SPAN):[];
   const nextHashes=new Set(nextAligned.map(h=>h.queryHash||h.hash));
+  const exactVotes=aligned.reduce((n,h)=>n+(h.exact?(h.w||1):0),0);
   return {
-    votes:bestVotes, nextVotes, nextHashes:nextHashes.size, aligned,
-    hashes:hashes.size, buckets:buckets.size,
+    votes:bestVotes, nextVotes, bestBin, nextBin, nextHashes:nextHashes.size, aligned,
+    hashes:hashes.size, buckets:buckets.size, exactVotes,
     totalHits:card.hits.length,
   };
+}
+function compareCards(a,b){
+  return (b.votes||0)-(a.votes||0) ||
+    (b.voteHashes||0)-(a.voteHashes||0) ||
+    (b.voteBuckets||0)-(a.voteBuckets||0);
 }
 // The match panel only ever shows the three strongest candidates.
 function topCards(){
   return state.cards.filter(c=>!c.hidden)
-    .sort((a,b)=>(b.matched-a.matched)||((b.votes||0)-(a.votes||0)))
+    .sort((a,b)=>(b.matched-a.matched)||compareCards(a,b))
     .slice(0,3);
+}
+// Stage 2 explanation: why a verified candidate was accepted or rejected.
+function explainDecision(top,rivalVotes,enoughAudio,recentHashes,clearWinner,singleCluster,supported){
+  if(!top) return 'no-candidate';
+  if(!enoughAudio) return 'insufficient-matching-duration';
+  if(state.dbg.rms<0.005) return 'poor-microphone-input';
+  if(recentHashes.length<20) return 'insufficient-distinctive-fingerprints';
+  if(state.dbg.lookups>50 && state.dbg.hits/state.dbg.lookups>0.5) return 'too-many-hash-collisions';
+  if(!supported) return 'insufficient-evidence';
+  if(!clearWinner) return 'ambiguous-competing-candidates';
+  if(!singleCluster) return 'inconsistent-time-offsets';
+  return 'matched';
 }
 function renderCards(){
   const container = $('cards');
@@ -625,7 +660,7 @@ async function startEngine(){
   const noiseSource=ctx.createBufferSource();
   noiseSource.buffer=noiseBuffer; noiseSource.loop=true;
   const noiseGain=ctx.createGain();
-  noiseGain.gain.value=(+$('noiseSlider').value)*0.4;
+  noiseGain.gain.value=0;
   noiseSource.connect(noiseGain); noiseGain.connect(mix); noiseSource.start();
   mix.connect(analyser);
   const silent=ctx.createGain(); silent.gain.value=0;
@@ -635,6 +670,7 @@ async function startEngine(){
   state.noiseGain=noiseGain; state.mix=mix;
   state.sessionStart=ctx.currentTime; state.running=true;
   state.micConnected=false; state.micDenied=false;
+  updateNoiseGain();
   $('micError').classList.add('hidden');
   state.cards=[];
 
@@ -655,7 +691,7 @@ async function startEngine(){
       const index=new Map(validIndex.map(x=>[x[0].toUpperCase(),x[1]]));
       state.cards.push({
         name:s.name, hidden:false, sequence:null, buffer:null, ready:true, userAdded:true,
-        hashIndex:index, votes:0, voteHashes:0, voteBuckets:0, matched:false,
+        hashIndex:index, votes:0, voteHashes:0, voteBuckets:0, exactVotes:0, approxVotes:0, offsetBin:0, nextOffsetBin:0, matched:false,
         matchedPeakIds:new Set(), hits:[],
       });
     });
@@ -667,8 +703,8 @@ async function startEngine(){
   for(const song of BUILTIN_SONGS){
     state.cards.push({
       name:song.name, hidden:false, sequence:null, buffer:null, ready:true, builtin:true,
-      hashIndex:new Map((song.index||[]).map(x=>[x[0],x[1]])),
-      votes:0, voteHashes:0, voteBuckets:0, matched:false,
+      hashIndex:new Map((song.index||[]).map(x=>[String(x[0]).toUpperCase(),x[1]])),
+      votes:0, voteHashes:0, voteBuckets:0, exactVotes:0, approxVotes:0, offsetBin:0, nextOffsetBin:0, matched:false,
       matchedPeakIds:new Set(), hits:[],
     });
   }
@@ -693,12 +729,14 @@ async function startMic(){
     micSource.connect(state.mix);
     state.stream=stream; state.micSource=micSource;
     state.micConnected=true; state.micDenied=false;
+    updateNoiseGain();
     $('micError').classList.add('hidden');
     $('micToggle').textContent='Stop mic';
     $('micState').textContent='live';
     $('micBtn').classList.add('active');
   }catch(err){
     state.micConnected=false; state.micDenied=true;
+    updateNoiseGain();
     const name=err && err.name;
     let msg='Microphone unavailable. You can still add songs, but recognition needs mic access.';
     if(name==='NotAllowedError'||name==='PermissionDeniedError'||name==='SecurityError')
@@ -725,6 +763,7 @@ function toggleMic(){ if(state.micConnected) stopMic(); else startMic(); }
 function stopMic(){
   state.running=false;
   state.micConnected=false; state.micDenied=false; state.confidence=0;
+  updateNoiseGain();
   $('micError').classList.add('hidden');
   $('secFft').classList.remove('recording');
   state.micGen++;
@@ -740,7 +779,8 @@ function stopMic(){
   state.peaks=[]; state.hashes=[]; state.hashedPairs.clear();
   state.winner=null; state.scanCandidate=null; state.decision='stopped'; state.listenStart=null;
   state.cards.forEach(c=>{
-    c.matched=false; c.votes=0; c.voteHashes=0; c.voteBuckets=0;
+    c.matched=false; c.confidence=0; c.votes=0; c.voteHashes=0; c.voteBuckets=0;
+    c.exactVotes=0; c.approxVotes=0; c.totalHits=0;
     c.hits=[]; c.matchedPeakIds=new Set();
   });
   $('micToggle').textContent='Start mic';
@@ -766,7 +806,7 @@ function updateHashes(){
       targets.push(target);
     }
     targets.sort((x,y)=>y.mag-x.mag);
-    for(const target of targets.slice(0,5)){
+    for(const target of targets.slice(0,TARGET_PAIRS)){
       const key=anchor.id+'-'+target.id;
       if(state.hashedPairs.has(key)) continue;
       state.hashedPairs.add(key);
@@ -786,7 +826,7 @@ function updateHashes(){
           if(!times) continue;
           state.dbg.hits++;
           for(const dbt of times){
-            card.hits.push({hash:variant.hash,queryHash:hash,time:anchor.t,dbt:dbt,offset:anchor.t-dbt,a:anchor.id,b:target.id,w:variant.w});
+            card.hits.push({hash:variant.hash,queryHash:hash,time:anchor.t,dbt:dbt,offset:anchor.t-dbt,a:anchor.id,b:target.id,w:variant.w,exact:variant.exact});
             if(card.hits.length>1800) card.hits.shift();
           }
         }
@@ -794,15 +834,21 @@ function updateHashes(){
     }
   }
 
-  const active=state.peaks.length>0 && (tNow-state.lastPeakAt)<1.0;
-  const recentHashes=state.hashes.filter(h=>tNow-(h.t+state.sessionStart)<=5);
+  const active=state.micConnected && state.peaks.length>0 && (tNow-state.lastPeakAt)<1.0;
 
   if(active && state.listenStart===null){
     state.listenStart=tNow;
     state.decision='listening';
     state.winner=null; state.scanCandidate=null;
-    state.cards.forEach(c=>{ c.hits=[]; });
+    // A new track starts a new voting session: stale peaks/hashes must not vote.
+    state.peaks=[]; state.hashes=[]; state.hashedPairs.clear(); state.hashSig='';
+    state.dbg.hashTotal=0; state.dbg.peakFrames=[]; state.dbg.windowStart=tNow;
+    state.cards.forEach(c=>{
+      c.hits=[]; c.votes=0; c.voteHashes=0; c.voteBuckets=0;
+      c.exactVotes=0; c.approxVotes=0; c.totalHits=0;
+    });
   }
+  const recentHashes=state.hashes.filter(h=>tNow-(h.t+state.sessionStart)<=5);
   if(!active && state.listenStart!==null && (tNow-state.lastPeakAt)>2.0){
     state.listenStart=null;
     if(state.decision==='listening') state.decision='scanning';
@@ -816,17 +862,18 @@ function updateHashes(){
     card.nextHashes=result.nextHashes;
     card.voteHashes=result.hashes;
     card.voteBuckets=result.buckets;
+    card.exactVotes=result.exactVotes;
+    card.approxVotes=Math.max(0,result.votes-result.exactVotes);
     card.totalHits=result.totalHits;
     card.topBin=result.votes;
     card.secondBin=result.nextVotes;
+    card.offsetBin=result.bestBin;
+    card.nextOffsetBin=result.nextBin;
     card.queryTotal=recentHashes.length;
     card.matchedPeakIds=new Set();
     result.aligned.forEach(h=>{card.matchedPeakIds.add(h.a);card.matchedPeakIds.add(h.b);});
   }
-  const ranked=state.cards.filter(c=>!c.hidden).sort((a,b)=>
-    (b.votes||0)-(a.votes||0) ||
-    (b.voteHashes||0)-(a.voteHashes||0) ||
-    (b.voteBuckets||0)-(a.voteBuckets||0));
+  const ranked=state.cards.filter(c=>!c.hidden).sort(compareCards);
   const top=ranked[0], second=ranked[1];
   const rivalVotes=second?(second.votes||0):0;
   state.cards.forEach(c=>{
@@ -835,19 +882,24 @@ function updateHashes(){
     c.confidence=Math.min(99,Math.round(v/(v+rival+3)*100));
   });
   const enoughAudio=state.listenStart!==null && (tNow-state.listenStart)>=5;
-  const clearWinner=top && (!rivalVotes || top.votes>=rivalVotes*1.8);
+  const clearWinner=top && (!rivalVotes || top.votes>=rivalVotes*1.3);
   // A second offset cluster is only a problem when it has comparable votes AND
-  // comparable hash support. Repeated hook lines can make two offsets look alike.
-  const singleCluster=top && (!top.nextVotes ||
+  // comparable hash support. A large lead over the rival song overrides it.
+  const singleCluster=top && ((!rivalVotes || top.votes>=rivalVotes*3) ||
+    !top.nextVotes ||
     top.votes>=top.nextVotes*1.5 ||
     top.voteHashes>=top.nextHashes*1.5 ||
     top.votes-top.nextVotes>=20);
   const supported=top && top.votes>=VOTE_MIN_VOTES &&
-    top.voteHashes>=VOTE_MIN_HASHES && top.voteBuckets>=VOTE_MIN_BUCKETS;
+    top.voteHashes>=VOTE_MIN_HASHES && top.voteBuckets>=VOTE_MIN_BUCKETS &&
+    top.exactVotes>=VOTE_MIN_EXACT_VOTES;
   state.scanCandidate=(active && clearWinner && supported &&
     top.votes>=VOTE_SCAN_VOTES && top.voteHashes>=VOTE_SCAN_HASHES) ? top : null;
   state.winner=(active && enoughAudio && clearWinner && singleCluster && supported) ? top : null;
   state.cards.forEach(c=>{ c.matched=(c===state.winner); });
+  state.dbg.reason=state.winner?'matched':explainDecision(top,rivalVotes,enoughAudio,recentHashes,clearWinner,singleCluster,supported);
+  if(state.winner){ if(state.dbg.identifiedAt===null) state.dbg.identifiedAt=tNow; }
+  else state.dbg.identifiedAt=null;
   state.dbg.lastMarginAbs=top?(top.votes||0)-rivalVotes:0;
   state.dbg.lastMarginRatio=top&&rivalVotes>0?(top.votes||0)/rivalVotes:0;
   const leadCard=state.winner||topCards()[0];
@@ -913,7 +965,11 @@ function updateSpectrogram(){
     state.lastPeakTime=now;
     const td=new Float32Array(state.analyser.fftSize);
     state.analyser.getFloatTimeDomainData(td);
-    const picked=pickPeaks(spectrum(td,0),Math.round(now/0.25));
+    let power=0;
+    for(let i=0;i<td.length;i++) power+=td[i]*td[i];
+    state.dbg.rms=Math.sqrt(power/td.length);
+    if(!state.dbg.windowStart) state.dbg.windowStart=now;
+    const picked=pickPeaks(spectrum(td,0),Math.round(now/0.25),state.ctx.sampleRate);
     if(picked.length) state.lastPeakAt=now;
     state.dbg.peakFrames.push({t:now,n:picked.length});
     state.dbg.peakFrames=state.dbg.peakFrames.filter(f=>now-f.t<=1);
@@ -1043,51 +1099,74 @@ const escapeHtml=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':
 
 function resetDebug(){
   state.dbg={peakFrames:[],lookups:0,hits:0,hashTotal:0,lastLog:0,report:null,
-    lastMarginAbs:0,lastMarginRatio:0};
+    lastMarginAbs:0,lastMarginRatio:0,rms:0,windowStart:0,identifiedAt:null,reason:'waiting'};
 }
 
-function debugReport(){
-  const peaksPerSec=state.dbg.peakFrames.reduce((n,f)=>n+f.n,0);
-  const songs=state.cards.filter(c=>!c.hidden).map(c=>({
-    song:c.name,
-    totalHits:c.totalHits||0,
-    topBin:Math.round(c.topBin||0),
-    secondBin:Math.round(c.secondBin||0),
-  })).sort((a,b)=>b.topBin-a.topBin);
+function debugReport(recentHashes=0){
+  const now=state.ctx?state.ctx.currentTime:0;
+  const windowSec=Math.max(0.25,now-(state.dbg.windowStart||now));
+  const peakTotal=state.dbg.peakFrames.reduce((n,f)=>n+f.n,0);
+  const detail=c=>({
+    song:c.name, votes:c.votes||0, hashes:c.voteHashes||0, buckets:c.voteBuckets||0,
+    exact:c.exactVotes||0, approx:c.approxVotes||0,
+    offset:Math.round(c.offsetBin||0), secondOffset:Math.round(c.nextOffsetBin||0),
+    hits:c.totalHits||0,
+  });
+  const ranked=state.cards.filter(c=>!c.hidden).sort(compareCards).map(detail);
+  const identifyMs=(state.dbg.identifiedAt!=null && state.listenStart!==null)
+    ? Math.max(0,(state.dbg.identifiedAt-state.listenStart)*1000) : null;
   return {
-    peaksPerSec,
+    sampleRate:state.ctx?state.ctx.sampleRate:0,
+    fftSize:FFT_N, hopMs:250, targetPairs:TARGET_PAIRS,
+    peaksPerSec:+(peakTotal/windowSec).toFixed(1),
+    hashesPerSec:+(state.dbg.hashTotal/windowSec).toFixed(1),
+    rms:+(state.dbg.rms||0).toFixed(4),
     queryHashes:state.hashes.length,
-    hashTotal:state.dbg.hashTotal,
+    recentHashes,
     lookupHits:state.dbg.hits,
     lookups:state.dbg.lookups,
+    collisionRate:state.dbg.lookups?+(state.dbg.hits/state.dbg.lookups).toFixed(2):0,
     marginAbs:Math.round(state.dbg.lastMarginAbs||0),
     marginRatio:+(state.dbg.lastMarginRatio||0).toFixed(2),
-    songs,
+    decision:state.decision,
+    reason:state.dbg.reason||'waiting',
+    identifyMs:identifyMs===null?'—':Math.round(identifyMs),
+    winner:state.winner?detail(state.winner):null,
+    candidateRanking:ranked.slice(0,10),
   };
 }
 
 function renderDebug(tNow, recentHashes){
   if(!state.debug) return;
-  state.dbg.report=debugReport();
+  state.dbg.report=debugReport(recentHashes);
   if(tNow-state.dbg.lastLog<1000) return;
   state.dbg.lastLog=tNow;
   const r=state.dbg.report;
-  console.log('[fingerprint debug] peaks/s='+r.peaksPerSec+
-    ' queryHashes='+r.queryHashes+' ('+recentHashes+' in 3s)'+
-    ' lookupHits='+r.lookupHits+'/'+r.lookups+
-    ' margin='+r.marginAbs+' ('+r.marginRatio+'x)');
-  console.table(r.songs);
+  console.log('[fingerprint debug] rate='+r.sampleRate+' Hz FFT='+r.fftSize+
+    ' hop='+r.hopMs+' ms rms='+r.rms+
+    ' peaks/s='+r.peaksPerSec+' hashes/s='+r.hashesPerSec+
+    ' queryHashes='+r.queryHashes+' ('+recentHashes+'/5s)');
+  console.log('[fingerprint debug] decision='+r.decision+' reason='+r.reason+
+    ' identify='+r.identifyMs+' ms margin='+r.marginAbs+' ('+r.marginRatio+'x)');
+  console.table(r.candidateRanking);
   const body=$('debugBody');
   if(!body) return;
-  const lines=r.songs.slice(0,12).map(s=>
-    s.song.slice(0,20).padEnd(21)+' hits '+String(s.totalHits).padStart(4)+
-    ' top '+String(s.topBin).padStart(4)+' 2nd '+String(s.secondBin).padStart(4));
-  body.textContent='peaks/s '+r.peaksPerSec+' · query hashes '+r.queryHashes+
-    ' ('+recentHashes+'/3s) · total '+r.hashTotal+
-    '\nlookup hits '+r.lookupHits+'/'+r.lookups+
-    ' · margin '+r.marginAbs+' ('+r.marginRatio+'x)\n\n'+
-    'song                 hits   top  2nd\n'+lines.join('\n')+
-    (r.songs.length>12?'\n… '+(r.songs.length-12)+' more in console':'');
+  const lead=r.winner||r.candidateRanking[0]||{};
+  const lines=r.candidateRanking.slice(0,10).map(s=>
+    s.song.slice(0,18).padEnd(19)+' v '+String(s.votes).padStart(4)+
+    ' h '+String(s.hashes).padStart(3)+' b '+String(s.buckets).padStart(2)+
+    ' ex '+String(s.exact).padStart(4)+' ap '+String(s.approx).padStart(3));
+  body.textContent='audio '+r.sampleRate+' Hz · FFT '+r.fftSize+' · hop '+(r.hopMs/1000).toFixed(2)+
+    ' s · rms '+r.rms+'\n'+
+    'peaks/s '+r.peaksPerSec+' · hashes/s '+r.hashesPerSec+
+    ' · query '+r.queryHashes+' ('+recentHashes+'/5s)\n'+
+    'exact '+lead.exact+' · approx '+lead.approx+' · distinct '+lead.hashes+
+    ' · time buckets '+lead.buckets+'\n'+
+    'winning offset '+(lead.offset||0)+' · competing offset '+(lead.secondOffset||0)+
+    ' · margin '+r.marginAbs+' ('+r.marginRatio+'x)\n'+
+    'decision '+r.decision+' · reason '+r.reason+' · identify '+r.identifyMs+' ms\n\n'+
+    'song               votes   h  b   ex   ap\n'+lines.join('\n')+
+    (r.candidateRanking.length>10?'\n… more in console':'');
 }
 
 function toggleDebug(){
@@ -1104,9 +1183,11 @@ function renderTestTable(results){
   const rows=results.map(r=>'<tr><td>'+escapeHtml(r.song)+
     '</td><td>'+(r.pass?'PASS':'FAIL')+
     '</td><td>'+escapeHtml(r.got)+
-    '</td><td>'+r.margin+'x</td></tr>').join('');
+    '</td><td>'+(r.votes||0)+'</td><td>'+(r.exact||0)+
+    '</td><td>'+r.margin+'x</td><td>'+escapeHtml(r.reason||'—')+'</td></tr>').join('');
   return '<table class="dbg-table"><thead><tr><th align="left">song</th>'+
-    '<th align="left">result</th><th align="left">got</th><th align="left">margin</th>'+
+    '<th align="left">result</th><th align="left">got</th><th align="left">votes</th>'+
+    '<th align="left">exact</th><th align="left">margin</th><th align="left">reason</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table><div class="dbg-summary">'+
     results.filter(r=>r.pass).length+'/'+results.length+' passed</div>';
 }
@@ -1122,37 +1203,63 @@ function testClipBuffer(ctx,clip){
 
 async function runSelfTest(){
   if(state.selfTest && state.selfTest.running) return;
-  const btn=$('selfTestBtn');
+  const btn=$('selfTestBtn'), micBtn=$('micBtn');
+  const slider=$('noiseSlider'), noiseVal=$('noiseVal');
   if(!state.micConnected) await startMic();
   if(!state.micConnected){ setDebugBody('Mic unavailable — self-test needs microphone access.'); return; }
   state.selfTest={running:true,results:[],index:0};
+  const savedNoise=slider.value, savedNoiseText=noiseVal?noiseVal.textContent:'';
+  slider.value='0';
+  if(noiseVal) noiseVal.textContent='0.00';
+  slider.style.setProperty('--fill','0%');
+  updateNoiseGain();
   if(btn) btn.disabled=true;
+  if(micBtn) micBtn.disabled=true;
   const body=$('debugBody'), ctx=state.ctx;
-  for(let i=0;i<TEST_SONGS.length;i++){
-    const name=TEST_SONGS[i], clip=TEST_AUDIO[i];
-    resetDebug();
-    state.listenStart=null; state.winner=null; state.scanCandidate=null; state.decision='scanning';
-    state.peaks=[]; state.hashes=[]; state.hashedPairs.clear();
-    state.cards.forEach(c=>{ c.hits=[]; c.votes=0; c.matchedPeakIds=new Set(); });
-    if(body) body.textContent='Playing '+(i+1)+'/8: '+name+'\nKeep the mic near your speakers.';
-    const source=ctx.createBufferSource(), gain=ctx.createGain();
-    source.buffer=testClipBuffer(ctx,clip);
-    gain.gain.value=0.5;
-    source.connect(gain); gain.connect(ctx.destination);
-    source.start();
-    await sleep(6000);
-    try{ source.stop(); }catch(e){}
-    const winner=state.winner;
-    const result={song:name, got:winner?winner.name:'—',
-      pass:!!winner&&winner.name===name, margin:(state.dbg.lastMarginRatio||0).toFixed(2)};
-    state.selfTest.results.push(result);
-    console.log('[fingerprint test]',result);
-    await sleep(1200);
+  try{
+    for(let i=0;i<TEST_SONGS.length;i++){
+      const name=TEST_SONGS[i], clip=TEST_AUDIO[i];
+      resetDebug();
+      state.listenStart=null; state.lastPeakAt=0; state.lastPeakTime=0;
+      state.winner=null; state.scanCandidate=null; state.decision='scanning';
+      state.peaks=[]; state.hashes=[]; state.hashedPairs.clear(); state.hashSig='';
+      state.cards.forEach(c=>{
+        c.hits=[]; c.votes=0; c.voteHashes=0; c.voteBuckets=0;
+        c.exactVotes=0; c.approxVotes=0; c.totalHits=0; c.confidence=0;
+        c.matched=false; c.matchedPeakIds=new Set();
+      });
+      if(body) body.textContent='Playing '+(i+1)+'/8: '+name+'\nKeep the mic near your speakers.';
+      const source=ctx.createBufferSource(), gain=ctx.createGain();
+      source.buffer=testClipBuffer(ctx,clip);
+      gain.gain.value=0.5;
+      source.connect(gain); gain.connect(ctx.destination);
+      source.start();
+      await sleep(6000);
+      try{ source.stop(); }catch(e){}
+      const winner=state.winner;
+      const result={song:name, got:winner?winner.name:'—',
+        pass:!!winner&&winner.name===name,
+        votes:winner?(winner.votes||0):0,
+        exact:winner?(winner.exactVotes||0):0,
+        reason:state.dbg.reason||'—',
+        margin:(state.dbg.lastMarginRatio||0).toFixed(2)};
+      state.selfTest.results.push(result);
+      console.log('[fingerprint test]',result);
+      await sleep(1200);
+    }
+  }finally{
+    state.selfTest.running=false;
+    slider.value=savedNoise;
+    if(noiseVal) noiseVal.textContent=savedNoiseText;
+    slider.style.setProperty('--fill',(savedNoise*100)+'%');
+    updateNoiseGain();
+    if(btn) btn.disabled=false;
+    if(micBtn) micBtn.disabled=false;
+    if(body && state.selfTest.results.length){
+      body.innerHTML=renderTestTable(state.selfTest.results);
+      console.table(state.selfTest.results);
+    }
   }
-  state.selfTest.running=false;
-  if(btn) btn.disabled=false;
-  if(body) body.innerHTML=renderTestTable(state.selfTest.results);
-  console.table(state.selfTest.results);
 }
 
 function setDebugBody(text){
@@ -1182,7 +1289,7 @@ function fingerprintPass(samples,sampleRate,map){
   const hop=Math.max(1,Math.round(sampleRate*0.25));
   const peaks=[]; let id=0;
   for(let off=0;off+FFT_N<=samples.length;off+=hop){
-    const picked=pickPeaks(spectrum(samples,off),Math.round(off/(sampleRate*0.25)));
+    const picked=pickPeaks(spectrum(samples,off),Math.round(off/(sampleRate*0.25)),sampleRate);
     const t=off/sampleRate;
     for(const p of picked) peaks.push({id:id++,t,f:p.freq,mag:p.mag});
     const recent=peaks.filter(q=>t-q.t<=1.2);
@@ -1190,7 +1297,7 @@ function fingerprintPass(samples,sampleRate,map){
       const anchor=recent[a];
       const targets=recent.slice(a+1)
         .filter(q=>q.t>anchor.t && q.t-anchor.t>=0.1 && q.t-anchor.t<=1.2 && Math.abs(q.f-anchor.f)<=1000)
-        .sort((x,y)=>y.mag-x.mag).slice(0,8);
+        .sort((x,y)=>y.mag-x.mag).slice(0,TARGET_PAIRS);
       for(const tg of targets){
         const hash=computeHash(anchor.f,tg.f,tg.t-anchor.t);
         let arr=map.get(hash);
@@ -1260,6 +1367,19 @@ function buildHashesFromPCM(samples,sampleRate){
   return new Map(usable.slice(0,3000).map(e=>[e.hash,e.times]));
 }
 
+// Microphone input is mono; uploaded stereo files must use the same mono signal.
+function monoPCM(buffer){
+  const channels=buffer.numberOfChannels;
+  if(channels===1) return buffer.getChannelData(0);
+  const out=new Float32Array(buffer.length);
+  for(let c=0;c<channels;c++){
+    const data=buffer.getChannelData(c);
+    for(let i=0;i<out.length;i++) out[i]+=data[i];
+  }
+  for(let i=0;i<out.length;i++) out[i]/=channels;
+  return out;
+}
+
 async function addSongFile(file){
   const status=$('addStatus');
   if(!state.ctx){ status.textContent='Click the mic once first'; return; }
@@ -1269,9 +1389,9 @@ async function addSongFile(file){
     const buffer=await state.ctx.decodeAudioData(ab);
     const name=file.name.replace(/\.[^.]+$/,'').slice(0,28);
     const card={name:name, hidden:false, sequence:null, buffer:buffer, ready:false,
-      hashIndex:new Map(), votes:0, voteHashes:0, voteBuckets:0,
+      hashIndex:new Map(), votes:0, voteHashes:0, voteBuckets:0, exactVotes:0, approxVotes:0, offsetBin:0, nextOffsetBin:0,
       matched:false, matchedPeakIds:new Set(), hits:[]};
-    card.hashIndex=buildHashesFromPCM(buffer.getChannelData(0),buffer.sampleRate);
+    card.hashIndex=buildHashesFromPCM(monoPCM(buffer),buffer.sampleRate);
     card.ready=true;
     state.cards.push(card);
     saveLibrary();
@@ -1385,7 +1505,7 @@ $('noiseSlider').addEventListener('input', e=>{
   const v=+e.target.value;
   $('noiseVal').textContent=v.toFixed(2);
   e.target.style.setProperty('--fill',(v*100)+'%');
-  if(state.noiseGain) state.noiseGain.gain.value=v*0.4;
+  updateNoiseGain();
 });
 
 /* ---------- Guided tooltip tour (once per page load) ---------- */
